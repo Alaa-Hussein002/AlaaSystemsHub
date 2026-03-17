@@ -78,7 +78,7 @@ class CustomerController extends Controller
             'end_date'       => $request->end_date,
             'is_used'        => false,
             'is_active'      => true,
-            'created_by'     => (string) auth()->user()->_id,
+            'created_by' => (string) $request->user()->_id,
         ]);
 
         Notification::create([

@@ -43,7 +43,7 @@ class MessageController extends Controller
         $message->update([
             'reply'      => $request->reply,
             'replied_at' => now(),
-            'replied_by' => (string) auth()->user()->_id,
+            'replied_by' => (string) $request->user()->_id,
             'status'     => 'replied',
         ]);
 

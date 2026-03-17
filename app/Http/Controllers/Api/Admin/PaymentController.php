@@ -25,7 +25,7 @@ class PaymentController extends Controller
     {
         $query = Payment::orderBy('created_at', 'desc');
         if ($request->has('status')) $query->where('status', $request->status);
-        if ($request->has('method')) $query->where('payment_method', $request->method);
+        if ($request->has('method')) $query->where('payment_method', $request->input('method'));
 
         $payments = $query->get();
         return $this->success(PaymentResource::collection($payments));
@@ -47,7 +47,7 @@ class PaymentController extends Controller
             return $this->error('الدفعة مؤكدة بالفعل');
         }
 
-        $payment->confirm(auth()->user()->_id, $request->get('note', 'تم تأكيد الدفع'));
+        $payment->confirm($request->user()->_id, $request->get('note', 'تم تأكيد الدفع'));
 
         // إنشاء فاتورة
         $order = $payment->order;
@@ -67,7 +67,7 @@ class PaymentController extends Controller
         $payment = Payment::where('payment_number', $paymentNumber)->first();
         if (!$payment) return $this->notFound('الدفعة غير موجودة');
 
-        $payment->reject(auth()->user()->_id, $request->reason);
+        $payment->reject($request->user()->_id, $request->reason);
 
         ActivityLog::log('update', 'payments', "رفض الدفعة #{$paymentNumber}", 'payment', $payment->_id);
 

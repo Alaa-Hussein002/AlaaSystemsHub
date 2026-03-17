@@ -20,7 +20,7 @@ class DashboardController extends Controller
 {
     use ApiResponse;
 
-    public function index()
+    public function index(Request $request)
     {
         // إحصائيات عامة
         $stats = [
@@ -69,7 +69,7 @@ class DashboardController extends Controller
             });
 
         // إشعارات غير مقروءة
-        $unreadNotifications = Notification::where('user_id', (string) auth()->user()->_id)
+        $unreadNotifications = Notification::where('user_id', (string) $request->user()->_id)
             ->where('is_read', false)
             ->orderBy('created_at', 'desc')
             ->limit(10)

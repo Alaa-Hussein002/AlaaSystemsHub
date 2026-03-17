@@ -52,7 +52,7 @@ class OrderController extends Controller
         $order = Order::where('order_number', $orderNumber)->first();
         if (!$order) return $this->notFound('الطلب غير موجود');
 
-        $order->addStatusHistory($request->status, $request->note ?? '', auth()->user()->_id);
+        $order->addStatusHistory($request->status, $request->note ?? '', $request->user()->_id);
 
         if ($request->status === 'completed') {
             $order->update(['completed_at' => now()]);

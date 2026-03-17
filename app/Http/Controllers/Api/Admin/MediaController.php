@@ -46,7 +46,7 @@ class MediaController extends Controller
             'alt_text'       => $request->alt_text,
             'folder'         => $folder,
             'disk'           => 'public',
-            'uploaded_by'    => (string) auth()->user()->_id,
+            'uploaded_by' => (string) $request->user()->_id,
         ]);
 
         ActivityLog::log('create', 'media', "رفع ملف: {$file->getClientOriginalName()}");
