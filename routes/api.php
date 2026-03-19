@@ -49,6 +49,8 @@ use App\Http\Controllers\Api\Admin\AnalyticsController;
 use App\Http\Controllers\Api\Admin\MessageController;
 use App\Http\Controllers\Api\Admin\NotificationController;
 use App\Http\Controllers\Api\Admin\MediaController;
+use App\Http\Controllers\Api\Guest\ArticleController;
+use App\Http\Controllers\Api\Admin\ArticleController as AdminArticleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -100,6 +102,11 @@ Route::prefix('public')->group(function () {
     Route::post('/games/{slug}/play',       [GameController::class, 'play']);
     Route::post('/games/{slug}/score',      [GameController::class, 'submitScore']);
     Route::get('/games/{slug}/leaderboard', [GameController::class, 'leaderboard']);
+
+    // المقالات
+    Route::get('/articles',              [ArticleController::class, 'index']);
+    Route::get('/articles/categories',   [ArticleController::class, 'categories']);
+    Route::get('/articles/{slug}',       [ArticleController::class, 'show']);
 });
 
 /*
@@ -219,4 +226,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::get('/media',          [MediaController::class, 'index']);
     Route::post('/media/upload',  [MediaController::class, 'upload']);
     Route::delete('/media/{id}',  [MediaController::class, 'destroy']);
+
+        // المقالات
+    Route::apiResource('articles', AdminArticleController::class);
 });
