@@ -20,6 +20,7 @@ class CertificateResource extends JsonResource
             'issue_date'       => $this->issue_date,
             'expiry_date'      => $this->expiry_date,
             'skills_gained'    => $this->skills_gained,
+            'is_published'     => $this->is_published,
         ];
     }
 }

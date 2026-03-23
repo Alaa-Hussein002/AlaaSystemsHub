@@ -23,6 +23,7 @@ class EducationResource extends JsonResource
             'gpa_scale'        => $this->gpa_scale,
             'description'      => $this->description,
             'courses_by_level' => $this->courses_by_level,
+            'is_published'     => $this->is_published,
         ];
     }
 }

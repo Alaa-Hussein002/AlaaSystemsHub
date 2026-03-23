@@ -30,6 +30,7 @@ class ProjectResource extends JsonResource
             'tags'              => $this->tags,
             'testimonials'      => TestimonialResource::collection($this->whenLoaded('testimonials')),
             'created_at'        => $this->created_at?->toDateTimeString(),
+            'is_published'      => $this->is_published,
         ];
     }
 }

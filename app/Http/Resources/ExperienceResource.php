@@ -22,6 +22,7 @@ class ExperienceResource extends JsonResource
             'end_date'         => $this->end_date,
             'is_current'       => $this->is_current,
             'achievements'     => $this->achievements,
+            'is_published'     => $this->is_published,
             'technologies_used'=> $this->technologies_used,
         ];
     }

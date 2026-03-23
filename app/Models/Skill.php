@@ -10,19 +10,19 @@ class Skill extends Model
     protected $collection = 'skills';
 
     protected $fillable = [
-        'category',       // { ar, en }
+        'category',       // {ar, en}
         'icon',
         'color',
         'sort_order',
-        'is_published',
-        'technologies',   // embedded array
+        'is_published',   // ← هذا كان ناقص!
+        'technologies',   // array of {name, proficiency, years_of_experience, is_featured}
     ];
-
+    
     protected $casts = [
         'category'     => 'array',
         'technologies' => 'array',
-        'is_published' => 'boolean',
         'sort_order'   => 'integer',
+        'is_published' => 'boolean',
     ];
 
     public function scopePublished($query)

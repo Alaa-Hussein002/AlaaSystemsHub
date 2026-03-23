@@ -15,6 +15,7 @@ class SkillResource extends JsonResource
             'icon'         => $this->icon,
             'color'        => $this->color,
             'technologies' => $this->technologies,
+            'is_published' => $this->is_published,
             'sort_order'   => $this->sort_order,
         ];
     }

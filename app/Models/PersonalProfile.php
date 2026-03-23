@@ -10,34 +10,44 @@ class PersonalProfile extends Model
     protected $collection = 'personal_profiles';
 
     protected $fillable = [
-        'full_name',        // { ar, en }
-        'title',            // { ar, en }
-        'bio',              // { ar, en }
+        'full_name',
+        'title',
+        'bio',
         'photo',
         'cover_image',
         'cv_file',
         'date_of_birth',
         'nationality',
-        'location',         // { city, country, coordinates }
-        'contact',          // { email, phone, whatsapp }
-        'social_links',     // array of { platform, url, icon }
-        'highlights',       // array of { icon, label, value }
+        'location',
+        'contact',
+        'social_links',
+        'highlights',
         'available_for_hire',
+        'availability_status',
         'is_published',
-        'seo',              // { meta_title, meta_description, meta_keywords }
+        'seo',
+        'rotating_roles',
+        'tech_display',
+        'tools',
+        'code_block_lines',
+        'hero_greeting',
     ];
-
+    
     protected $casts = [
-        'full_name'         => 'array',
-        'title'             => 'array',
-        'bio'               => 'array',
-        'location'          => 'array',
-        'contact'           => 'array',
-        'social_links'      => 'array',
-        'highlights'        => 'array',
-        'seo'               => 'array',
-        'available_for_hire'=> 'boolean',
-        'is_published'      => 'boolean',
+        'full_name'          => 'array',
+        'title'              => 'array',
+        'bio'                => 'array',
+        'location'           => 'array',
+        'contact'            => 'array',
+        'social_links'       => 'array',
+        'highlights'         => 'array',
+        'seo'                => 'array',
+        'rotating_roles'     => 'array',
+        'tech_display'       => 'array',
+        'tools'              => 'array',
+        'code_block_lines'   => 'array',
+        'available_for_hire' => 'boolean',
+        'is_published'       => 'boolean',
     ];
 
     /**
