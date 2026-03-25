@@ -64,7 +64,7 @@ class ProductCategory extends Model
     public function updateProductsCount()
     {
         $this->update([
-            'products_count' => $this->products()->where('is_active', true)->count()
+            'products_count' => $this->products()->where('is_published', true)->count()
         ]);
     }
 }

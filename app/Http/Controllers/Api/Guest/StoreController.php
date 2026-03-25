@@ -11,6 +11,7 @@ use App\Models\ProductCategory;
 use App\Models\Setting;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class StoreController extends Controller
 {
@@ -99,48 +100,83 @@ class StoreController extends Controller
         );
     }
 
-    /**
+        /**
      * تفاصيل منتج
      * GET /api/public/store/products/{slug}
      */
-    public function productDetails(string $slug)
+        // 🟢 تم التعديل لتستقبل $product_slug
+    public function productDetails(string $product_slug)
     {
-        $product = Product::published()
-            ->where('slug', $slug)
-            ->with('category')
-            ->first();
+        try {
+            // 1. نبحث بالـ slug
+            $product = \App\Models\Product::published()
+                ->where('slug', $product_slug)
+                ->with('category')
+                ->first();
 
-        if (!$product) {
-            return $this->notFound('المنتج غير موجود');
+            if (!$product) {
+                // إذا لم نجده، لنتأكد أنه ربما يكون ID
+                if (preg_match('/^[a-f\d]{24}$/i', $product_slug)) {
+                    $product = \App\Models\Product::published()
+                        ->with('category')
+                        ->find($product_slug);
+                }
+            }
+
+            if (!$product) {
+                return response()->json(['message' => 'المنتج غير موجود'], 404);
+            }
+
+            // زيادة المشاهدات
+            try {
+                $product->incrementViews();
+            } catch (\Exception $e) { }
+
+            // الإحصائيات (تأكد أن كلاس AnalyticsEvent موجود، إن لم يكن موجوداً احذف هذا البلوك)
+            try {
+                if (class_exists(\App\Models\AnalyticsEvent::class)) {
+                    $productName = is_array($product->name) 
+                        ? ($product->name['ar'] ?? $product->name['en'] ?? 'بدون اسم') 
+                        : (string) $product->name;
+
+                    \App\Models\AnalyticsEvent::create([
+                        'event_type'     => 'product_view',
+                        'event_category' => 'store',
+                        'target_type'    => 'product',
+                        'target_id'      => (string) $product->_id,
+                        'target_title'   => $productName,
+                        'visitor'        => [
+                            'ip_hash'    => md5(request()->ip()),
+                            'session_id' => session()->getId(),
+                        ],
+                        'page_url' => request()->fullUrl(),
+                    ]);
+                }
+            } catch (\Exception $e) { }
+
+            // المنتجات المشابهة
+            $related = \App\Models\Product::published()
+                ->where('_id', '!=', $product->_id)
+                ->where('category_id', $product->category_id)
+                ->limit(4)
+                ->get();
+
+            // إرجاع البيانات
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'product' => new \App\Http\Resources\ProductResource($product),
+                    'related' => \App\Http\Resources\ProductResource::collection($related),
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'خطأ داخلي',
+                'error'   => $e->getMessage()
+            ], 500);
         }
-
-        $product->incrementViews();
-
-        // تسجيل الزيارة
-        AnalyticsEvent::create([
-            'event_type'     => 'product_view',
-            'event_category' => 'store',
-            'target_type'    => 'product',
-            'target_id'      => (string) $product->_id,
-            'target_title'   => $product->name['ar'] ?? $product->name,
-            'visitor'        => [
-                'ip_hash'    => md5(request()->ip()),
-                'session_id' => session()->getId(),
-            ],
-            'page_url' => request()->fullUrl(),
-        ]);
-
-        // منتجات مشابهة
-        $related = Product::published()
-            ->where('_id', '!=', $product->_id)
-            ->where('category_id', $product->category_id)
-            ->limit(4)
-            ->get();
-
-        return $this->success([
-            'product' => new ProductResource($product),
-            'related' => ProductResource::collection($related),
-        ], 'تفاصيل المنتج');
     }
 
     /**

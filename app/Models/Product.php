@@ -26,7 +26,7 @@ class Product extends Model
         'stock',             // embedded { track_inventory, quantity, allow_backorder }
         'status',            // draft | published | archived
         'is_featured',
-        'is_active',
+        'is_published',
         'sort_order',
         'published_at',
     ];
@@ -40,10 +40,10 @@ class Product extends Model
         'physical_details' => 'array',
         'attributes'       => 'array',
         'tags'             => 'array',
-        'stats'            => 'array',
+        // 'stats'            => 'array',
         'stock'            => 'array',
         'is_featured'      => 'boolean',
-        'is_active'        => 'boolean',
+        'is_published'        => 'boolean',
         'sort_order'       => 'integer',
         'published_at'     => 'datetime',
     ];
@@ -63,7 +63,7 @@ class Product extends Model
 
     public function scopePublished($query)
     {
-        return $query->where('status', 'published')->where('is_active', true);
+        return $query->where('status', 'published')->where('is_published', true);
     }
 
     public function scopeDigital($query)
