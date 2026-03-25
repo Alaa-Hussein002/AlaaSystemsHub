@@ -180,6 +180,12 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::post('/payments/{paymentNumber}/confirm', [AdminPaymentController::class, 'confirm']);
     Route::post('/payments/{paymentNumber}/reject',  [AdminPaymentController::class, 'reject']);
 
+    // إعدادات طرق الدفع 
+    Route::get('/payment-methods', [AdminPaymentController::class, 'getMethods']);
+    Route::post('/payment-methods', [AdminPaymentController::class, 'storeMethod']);
+    Route::put('/payment-methods/{id}', [AdminPaymentController::class, 'updateMethod']);
+    Route::delete('/payment-methods/{id}', [AdminPaymentController::class, 'deleteMethod']);
+
     // الفواتير
     Route::get('/invoices',                  [InvoiceController::class, 'index']);
     Route::get('/invoices/{invoiceNumber}',  [InvoiceController::class, 'show']);

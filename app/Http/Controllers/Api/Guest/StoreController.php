@@ -105,7 +105,7 @@ class StoreController extends Controller
      * GET /api/public/store/products/{slug}
      */
         // 🟢 تم التعديل لتستقبل $product_slug
-    public function productDetails(string $product_slug)
+        public function productDetails(string $product_slug)
     {
         try {
             // 1. نبحث بالـ slug
@@ -127,12 +127,38 @@ class StoreController extends Controller
                 return response()->json(['message' => 'المنتج غير موجود'], 404);
             }
 
+            // 🟢 الإضافة الجديدة: فحص انتهاء الخصم وإلغائه تلقائياً
+                        // 🟢 فحص انتهاء الخصم وإلغائه تلقائياً بأمان تام
+            $pricing = $product->pricing ?? [];
+            if (!empty($pricing['offer_end'])) {
+                try {
+                    // استخدام Carbon بأمان تام
+                    $endDate = \Carbon\Carbon::parse($pricing['offer_end']);
+                    
+                    if ($endDate->isPast()) {
+                        // إعادة السعر للحالة الطبيعية
+                        $pricing['offer_type'] = 'none';
+                        $pricing['discount_value'] = 0;
+                        $pricing['is_free'] = false;
+                        $pricing['offer_end'] = null; // تفريغ التاريخ كي لا يفحصه مرة أخرى
+                        
+                        // تحديث الداتا بيس
+                        $product->update(['pricing' => $pricing]);
+                        
+                        // تحديث الكائن ليعرض السعر الأساسي للزائر
+                        $product->pricing = $pricing;
+                    }
+                } catch (\Exception $e) { 
+                    // تجاهل الخطأ بصمت إذا كان التاريخ غير صالح
+                }
+            }
+
             // زيادة المشاهدات
             try {
                 $product->incrementViews();
             } catch (\Exception $e) { }
 
-            // الإحصائيات (تأكد أن كلاس AnalyticsEvent موجود، إن لم يكن موجوداً احذف هذا البلوك)
+            // الإحصائيات 
             try {
                 if (class_exists(\App\Models\AnalyticsEvent::class)) {
                     $productName = is_array($product->name) 

@@ -40,7 +40,6 @@ class Product extends Model
         'physical_details' => 'array',
         'attributes'       => 'array',
         'tags'             => 'array',
-        // 'stats'            => 'array',
         'stock'            => 'array',
         'is_featured'      => 'boolean',
         'is_published'        => 'boolean',
@@ -100,13 +99,23 @@ class Product extends Model
     // Helpers
     // ====================================
 
-    public function incrementViews()
+        public function incrementViews()
     {
-        $this->increment('stats.views_count');
+        // إذا كان الحقل غير موجود أو ليس مصفوفة (مثلاً محفوظ بالخطأ كنص فارغ)، اجعله مصفوفة فارغة
+        $stats = is_array($this->stats) ? $this->stats : [];
+        
+        $stats['views_count'] = ($stats['views_count'] ?? 0) + 1;
+        
+        $this->update(['stats' => $stats]);
     }
 
     public function incrementSales(int $count = 1)
     {
-        $this->increment('stats.sales_count', $count);
+        // نفس الحماية لدالة المبيعات
+        $stats = is_array($this->stats) ? $this->stats : [];
+        
+        $stats['sales_count'] = ($stats['sales_count'] ?? 0) + $count;
+        
+        $this->update(['stats' => $stats]);
     }
 }

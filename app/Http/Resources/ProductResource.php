@@ -9,6 +9,31 @@ class ProductResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $pricing = $this->pricing ?? [];
+
+        // 🟢 فحص تواريخ العرض (بداية ونهاية) مباشرة في الـ Resource
+        if (isset($pricing['offer_type']) && $pricing['offer_type'] !== 'none') {
+            $now = time();
+            $shouldHideOffer = false;
+
+            // 1. هل العرض لم يبدأ بعد؟
+            if (!empty($pricing['offer_start']) && strtotime($pricing['offer_start']) > $now) {
+                $shouldHideOffer = true;
+            }
+
+            // 2. هل العرض قد انتهى؟
+            if (!empty($pricing['offer_end']) && strtotime($pricing['offer_end']) <= $now) {
+                $shouldHideOffer = true;
+            }
+
+            // إذا كان العرض لم يبدأ أو انتهى، نخفي الخصم عن العميل
+            if ($shouldHideOffer) {
+                $pricing['offer_type'] = 'none';
+                $pricing['discount_value'] = 0;
+                $pricing['is_free'] = false;
+            }
+        }
+        
         return [
             'id'                => (string) $this->_id,
             'name'              => $this->name,
@@ -16,16 +41,13 @@ class ProductResource extends JsonResource
             'description'       => $this->description,
             'short_description' => $this->short_description,
             'product_type'      => $this->product_type,
-            'status'            => $this->status, // 🟢 مهم للـ React لمعرفة حالة المنتج (مسودة/منشور/مؤرشف)
+            'status'            => $this->status,
             'pricing'           => $this->pricing,
             'media'             => $this->media,
-            // 🟢 في الداتا بيس اسمها digital_asset لكن الـ React ينتظرها باسم digital_file
             'digital_file'      => $this->digital_asset, 
-            // 🟢 في الداتا بيس اسمها physical_details لكن الـ React ينتظرها باسم physical_info
             'physical_info'     => [
                 'weight'         => $this->physical_details['weight'] ?? '',
                 'dimensions'     => $this->physical_details['dimensions'] ?? '',
-                // 🟢 دمج الكمية هنا ليفهمها الـ React
                 'stock_quantity' => $this->stock['quantity'] ?? 0, 
             ],
             'attributes'        => $this->attributes,
@@ -40,8 +62,6 @@ class ProductResource extends JsonResource
             'is_on_sale'        => $this->getIsOnSaleAttribute(),
             'category'          => new ProductCategoryResource($this->whenLoaded('category')),
             'created_at'        => $this->created_at?->toDateTimeString(),
-            
-            // 🟢 هنا تم توحيد الاسم ليصبح is_published كما ينتظره الـ React
             'is_published'      => $this->is_published, 
         ];
     }
