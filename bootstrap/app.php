@@ -23,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // إعدادات CORS للـ API
         $middleware->api(prepend: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        ]);
+            \App\Http\Middleware\CorsMiddleware::class,]);
 
         // إزالة CSRF من مسارات API
         $middleware->validateCsrfTokens(except: [
