@@ -11,7 +11,8 @@ RUN apk add --no-cache \
     unzip \
     mysql-client \
     nginx \
-    supervisor
+    supervisor\
+    ca-certificates
 
 # Install PHP extensions
 RUN docker-php-ext-install pdo_mysql zip exif pcntl bcmath gd
