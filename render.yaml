@@ -1,0 +1,21 @@
+# render.yaml
+services:
+  - type: web
+    name: alaa-systems-hub
+    env: docker
+    plan: free
+    region: frankfurt # أو singapore حسب موقعك
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: APP_NAME
+        value: "Alaa Systems Hub"
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        generateValue: true
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: error
