@@ -1,17 +1,21 @@
 <?php
+// app/Models/Education.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Education extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'educations';
+    use HasFactory;
+
+    // ✅ تحديد اسم الجدول بشكل صريح
+    protected $table = 'educations';
 
     protected $fillable = [
-        'institution',       // { ar, en }
-        'degree',            // { ar, en }
+        'institution',
+        'degree',
         'field_of_study',
         'institution_logo',
         'location',
@@ -20,20 +24,24 @@ class Education extends Model
         'is_current',
         'gpa',
         'gpa_scale',
-        'description',       // { ar, en }
-        'courses_by_level',  // embedded array
+        'description',
+        'courses_by_level',
         'sort_order',
         'is_published',
     ];
 
     protected $casts = [
-        'institution'      => 'array',
-        'degree'           => 'array',
-        'description'      => 'array',
+        'institution' => 'array',
+        'degree' => 'array',
+        'description' => 'array',
         'courses_by_level' => 'array',
-        'is_current'       => 'boolean',
-        'is_published'     => 'boolean',
-        'sort_order'       => 'integer',
+        'is_current' => 'boolean',
+        'is_published' => 'boolean',
+        'sort_order' => 'integer',
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'gpa' => 'decimal:2',
+        'gpa_scale' => 'decimal:2',
     ];
 
     public function scopePublished($query)
@@ -43,7 +51,25 @@ class Education extends Model
 
     public function scopeOrdered($query)
     {
-        return $query->orderBy('sort_order', 'asc');
+        return $query->orderBy('sort_order', 'asc')->orderBy('start_date', 'desc');
     }
 
+    public function getDurationAttribute()
+    {
+        if (!$this->start_date) {
+            return null;
+        }
+
+        $start = $this->start_date;
+        $end = $this->is_current ? now() : ($this->end_date ?? now());
+
+        $years = $start->diffInYears($end);
+        $months = $start->copy()->addYears($years)->diffInMonths($end);
+
+        return [
+            'years' => $years,
+            'months' => $months,
+            'total_months' => $start->diffInMonths($end),
+        ];
+    }
 }

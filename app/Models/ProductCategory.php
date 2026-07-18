@@ -1,41 +1,39 @@
 <?php
+// app/Models/ProductCategory.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class ProductCategory extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'product_categories';
+    use HasFactory;
 
     protected $fillable = [
-        'name',            // { ar, en }
+        'name',
         'slug',
-        'description',     // { ar, en }
+        'description',
         'icon',
         'image',
         'parent_id',
-        'product_type',    // digital | physical | both
+        'product_type',
         'sort_order',
         'is_active',
         'products_count',
-        'meta',            // { meta_title, meta_description }
+        'meta',
     ];
 
     protected $casts = [
-        'name'           => 'array',
-        'description'    => 'array',
-        'meta'           => 'array',
-        'is_active'      => 'boolean',
-        'sort_order'     => 'integer',
+        'name' => 'array',
+        'description' => 'array',
+        'meta' => 'array',
+        'is_active' => 'boolean',
+        'sort_order' => 'integer',
         'products_count' => 'integer',
     ];
 
-    // ====================================
-    // العلاقات
-    // ====================================
-
+    // Relationships
     public function parent()
     {
         return $this->belongsTo(ProductCategory::class, 'parent_id');

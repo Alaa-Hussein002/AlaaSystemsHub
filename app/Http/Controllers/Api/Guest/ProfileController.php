@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Api/Guest/ProfileController.php
 
 namespace App\Http\Controllers\Api\Guest;
 
@@ -13,15 +14,25 @@ class ProfileController extends Controller
 
     public function index()
     {
-        $profile = PersonalProfile::where('is_published', true)->first();
-
+        $profile = PersonalProfile::first();
+        
         if (!$profile) {
-            return $this->notFound('الملف الشخصي غير متاح');
+            // Return empty structure if no profile exists yet
+            return $this->success([
+                'full_name' => ['ar' => '', 'en' => ''],
+                'title' => ['ar' => '', 'en' => ''],
+                'bio' => ['ar' => '', 'en' => ''],
+                'photo' => null,
+                'cv_file' => null,
+                'rotating_roles' => [],
+                'availability_status' => 'available',
+                'tech_display' => [],
+                'tools' => [],
+                'code_block_lines' => [],
+                'highlights' => [],
+            ]);
         }
 
-        return $this->success(
-            new ProfileResource($profile),
-            'الملف الشخصي'
-        );
+        return $this->success(new ProfileResource($profile));
     }
 }

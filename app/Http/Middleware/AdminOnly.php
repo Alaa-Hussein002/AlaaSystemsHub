@@ -1,28 +1,31 @@
 <?php
+// app/Http/Middleware/AdminOnly.php
 
 namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AdminOnly
 {
     public function handle(Request $request, Closure $next)
     {
-        $user = $request->user();
-
-        if (!$user || $user->type !== 'admin') {
+        if (!Auth::check()) {
             return response()->json([
-                'status'  => false,
-                'message' => 'هذه الصفحة للمدراء فقط',
-            ], 403, [], JSON_UNESCAPED_UNICODE);
+                'success' => false,
+                'message' => 'غير مصرح',
+            ], 401);
         }
 
-        if ($user->status !== 'active') {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        
+        if (! $user || ! $user->isAdmin()) {
             return response()->json([
-                'status'  => false,
-                'message' => 'حسابك معطل',
-            ], 403, [], JSON_UNESCAPED_UNICODE);
+                'success' => false,
+                'message' => 'ليس لديك صلاحية الوصول',
+            ], 403);
         }
 
         return $next($request);

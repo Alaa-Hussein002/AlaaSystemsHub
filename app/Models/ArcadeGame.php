@@ -1,13 +1,14 @@
 <?php
+// app/Models/ArcadeGame.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class ArcadeGame extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'arcade_games';
+    use HasFactory;
 
     protected $fillable = [
         'name',
@@ -28,17 +29,17 @@ class ArcadeGame extends Model
     ];
 
     protected $casts = [
-        'name'        => 'array',
+        'name' => 'array',
         'description' => 'array',
-        'controls'    => 'array',
+        'controls' => 'array',
         'screenshots' => 'array',
         'game_config' => 'array',
-        'stats'       => 'array',
-        'rewards'     => 'array',
-        'tags'        => 'array',
+        'stats' => 'array',
+        'rewards' => 'array',
+        'tags' => 'array',
         'is_featured' => 'boolean',
-        'is_active'   => 'boolean',
-        'sort_order'  => 'integer',
+        'is_active' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     public function scores()
@@ -49,14 +50,9 @@ class ArcadeGame extends Model
     public function topScores(int $limit = 10)
     {
         return $this->scores()
-                    ->orderBy('score', 'desc')
-                    ->limit($limit)
-                    ->get();
-    }
-
-    public function incrementPlayCount()
-    {
-        $this->increment('stats.play_count');
+            ->orderBy('score', 'desc')
+            ->limit($limit)
+            ->get();
     }
 
     public function scopeActive($query)

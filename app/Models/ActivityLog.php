@@ -1,20 +1,22 @@
 <?php
+// app/Models/ActivityLog.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class ActivityLog extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'activity_logs';
+    use HasFactory;
 
     const UPDATED_AT = null;
 
     protected $fillable = [
         'user_id',
         'user_name',
-        'action',  
+        'action',
         'module',
         'description',
         'target_type',
@@ -32,12 +34,9 @@ class ActivityLog extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 
-    /**
-     * تسجيل نشاط بسهولة
-     */
     public static function log(
         string $action,
         string $module,
@@ -47,21 +46,20 @@ class ActivityLog extends Model
         $oldValues = null,
         $newValues = null
     ): self {
-        /** @var \App\Models\User|null $user */
-        $user = auth()->guard()->user();
+        $user = Auth::user();
 
         return static::create([
-            'user_id'     => $user ? (string) $user->_id : null,
-            'user_name'   => $user ? $user->name : 'System',
-            'action'      => $action,
-            'module'      => $module,
+            'user_id' => $user ? $user->id : null,
+            'user_name' => $user ? $user->name : 'System',
+            'action' => $action,
+            'module' => $module,
             'description' => $description,
             'target_type' => $targetType,
-            'target_id'   => $targetId ? (string) $targetId : null,
-            'old_values'  => $oldValues,
-            'new_values'  => $newValues,
-            'ip_address'  => request()->ip(),
-            'user_agent'  => request()->header('User-Agent'),
+            'target_id' => $targetId,
+            'old_values' => $oldValues,
+            'new_values' => $newValues,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->header('User-Agent'),
         ]);
     }
 }

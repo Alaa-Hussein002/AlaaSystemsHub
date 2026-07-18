@@ -1,20 +1,21 @@
 <?php
+// app/Models/Testimonial.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Testimonial extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'testimonials';
+    use HasFactory;
 
     protected $fillable = [
         'client_name',
         'client_title',
         'client_company',
         'client_avatar',
-        'content',         // { ar, en }
+        'content',
         'rating',
         'project_id',
         'is_featured',
@@ -23,16 +24,16 @@ class Testimonial extends Model
     ];
 
     protected $casts = [
-        'content'      => 'array',
-        'rating'       => 'integer',
-        'is_featured'  => 'boolean',
+        'content' => 'array',
+        'rating' => 'integer',
+        'is_featured' => 'boolean',
         'is_published' => 'boolean',
-        'sort_order'   => 'integer',
+        'sort_order' => 'integer',
     ];
 
     public function project()
     {
-        return $this->belongsTo(Project::class, 'project_id');
+        return $this->belongsTo(Project::class);
     }
 
     public function scopeOrdered($query)

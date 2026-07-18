@@ -1,43 +1,43 @@
 <?php
+// database/seeders/AdminUserSeeder.php
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\User;
 use App\Models\Role;
+use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class AdminUserSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     */
     public function run(): void
     {
-        $superAdminRole = Role::where('name', 'super_admin')->first();
 
-        User::updateOrCreate(
-            ['email' => 'alaa@alaasystems.com'],
-            [
-                'name'     => 'علاء حسين',
-                'email'    => 'alaa@alaasystems.com',
-                'password' => bcrypt('Admin@2026!Secure'),
-                'phone'    => '+967771234567',
-                'avatar'   => null,
-                'type'     => 'admin',
-                'role_id'  => $superAdminRole ? (string) $superAdminRole->_id : null,
-                'status'   => 'active',
-                'profile'  => [
-                    'gender'             => 'male',
-                    'city'               => 'صنعاء',
-                    'country'            => 'اليمن',
-                    'preferred_language' => 'ar',
-                    'timezone'           => 'Asia/Aden',
-                ],
-                'wallet_balance'    => 0,
-                'email_verified_at' => now(),
-            ]
-        );
+    $adminRole = Role::where('name', 'admin')->first();
 
-        $this->command->info('✅ تم إنشاء حساب المدير الأعلى بنجاح!');
-        $this->command->info('📧 البريد: alaa@alaasystems.com');
-        $this->command->info('🔑 كلمة المرور: Admin@2026!Secure');
-        $this->command->warn('⚠️  يرجى تغيير كلمة المرور فوراً بعد أول تسجيل دخول!');
+        User::create([
+            'name' => 'Alaa Hussein',
+            'email' => 'ala.hussein002@gmail.com',
+            'password' => Hash::make('Alaa.002#'),
+            'phone' => '+967737131058',
+            'avatar' => null,
+            'type' => 'admin',
+            'role_id' => $adminRole->id, // We'll handle roles through the admin panel
+            'status' => 'active',
+            'profile' => null,
+            'wallet_balance' => 0,
+            'last_login_at' => null,
+            'last_login_ip' => null,
+            'email_verified_at' => now(),
+        ]);
+
+        $this->command->info('✅ Admin user created successfully!');
+        $this->command->info('📧 Email: ala.hussein002@gmail.com');
+        $this->command->info('🔑 Password: Alaa.002#');
+        $this->command->info('👤 Type: admin');
+        $this->command->info('🎭 Role: Administrator');
     }
 }

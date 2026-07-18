@@ -1,13 +1,14 @@
 <?php
+// app/Models/ShippingMethod.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class ShippingMethod extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'shipping_methods';
+    use HasFactory;
 
     protected $fillable = [
         'name',
@@ -23,15 +24,15 @@ class ShippingMethod extends Model
     ];
 
     protected $casts = [
-        'name'                    => 'array',
-        'base_cost'               => 'decimal:2',
-        'cost_per_kg'             => 'decimal:2',
+        'name' => 'array',
+        'base_cost' => 'decimal:2',
+        'cost_per_kg' => 'decimal:2',
         'free_shipping_threshold' => 'decimal:2',
-        'estimated_days_min'      => 'integer',
-        'estimated_days_max'      => 'integer',
-        'available_zones'         => 'array',
-        'is_active'               => 'boolean',
-        'sort_order'              => 'integer',
+        'estimated_days_min' => 'integer',
+        'estimated_days_max' => 'integer',
+        'available_zones' => 'array',
+        'is_active' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     public function scopeActive($query)

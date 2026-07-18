@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Api/Admin/AnalyticsController.php
 
 namespace App\Http\Controllers\Api\Admin;
 
@@ -9,6 +10,7 @@ use App\Models\Product;
 use App\Traits\ApiResponse;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
 {
@@ -19,47 +21,55 @@ class AnalyticsController extends Controller
         $days = $request->get('days', 30);
         $startDate = Carbon::now()->subDays($days);
 
-        // زيارات يومية
+        // ✅ زيارات يومية
         $dailyVisits = [];
         for ($i = $days - 1; $i >= 0; $i--) {
             $date = Carbon::now()->subDays($i);
             $count = AnalyticsEvent::where('event_type', 'page_view')
-                ->where('created_at', '>=', $date->startOfDay()->toDateTimeString())
-                ->where('created_at', '<=', $date->copy()->endOfDay()->toDateTimeString())
+                ->whereDate('created_at', $date->format('Y-m-d'))
                 ->count();
-            $dailyVisits[] = ['date' => $date->format('Y-m-d'), 'count' => $count];
+            $dailyVisits[] = [
+                'date' => $date->format('Y-m-d'), 
+                'count' => $count
+            ];
         }
 
-        // المنتجات الأكثر مشاهدة
-        $topProducts = Product::where('is_active', true)
-            ->orderBy('stats.views_count', 'desc')
+        // ✅ المنتجات الأكثر مشاهدة
+        $topProducts = Product::where('is_published', true)
+            ->orderByRaw("CAST(JSON_EXTRACT(stats, '$.views_count') AS UNSIGNED) DESC")
             ->limit(10)
             ->get()
-            ->map(fn($p) => [
-                'name'  => $p->name,
-                'views' => $p->stats['views_count'] ?? 0,
-                'sales' => $p->stats['sales_count'] ?? 0,
-            ]);
+            ->map(function($p) {
+                $stats = $p->stats ?? [];
+                return [
+                    'name'  => $p->name,
+                    'views' => $stats['views_count'] ?? 0,
+                    'sales' => $stats['sales_count'] ?? 0,
+                ];
+            });
 
-        // مصادر الزيارات
+        // ✅ مصادر الزيارات (by device type)
         $sources = AnalyticsEvent::where('event_type', 'page_view')
             ->where('created_at', '>=', $startDate)
             ->get()
-            ->groupBy(function ($e) {
-                $device = $e->device['type'] ?? 'unknown';
+            ->groupBy(function ($event) {
+                $device = $event->device['type'] ?? 'unknown';
                 return $device;
             })
             ->map(fn($group) => $group->count());
 
-        // إيرادات شهرية
+        // ✅ إيرادات شهرية
         $monthlyRevenue = [];
         for ($i = 5; $i >= 0; $i--) {
             $month = Carbon::now()->subMonths($i);
             $revenue = Order::where('payment_status', 'paid')
-                ->where('created_at', '>=', $month->startOfMonth()->toDateTimeString())
-                ->where('created_at', '<=', $month->copy()->endOfMonth()->toDateTimeString())
+                ->whereYear('created_at', $month->year)
+                ->whereMonth('created_at', $month->month)
                 ->get()
-                ->sum(fn($o) => $o->pricing['total'] ?? 0);
+                ->sum(function($order) {
+                    return $order->pricing['total'] ?? 0;
+                });
+                
             $monthlyRevenue[] = [
                 'month'   => $month->format('Y-m'),
                 'revenue' => $revenue,

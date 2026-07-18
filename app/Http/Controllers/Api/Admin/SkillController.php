@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Api/Admin/SkillController.php
 
 namespace App\Http\Controllers\Api\Admin;
 
@@ -21,34 +22,92 @@ class SkillController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate(['category' => 'required|array']);
-        $skill = Skill::create($request->all());
-        ActivityLog::log('create', 'skills', 'أضاف مهارة جديدة');
+        $request->validate([
+            'category' => 'required|array',
+            'icon' => 'nullable|string',
+            'color' => 'nullable|string',
+        ]);
+
+        $data = $request->all();
+
+        // ✅ تنظيف الأيقونة قبل الحفظ
+        if (isset($data['icon'])) {
+            $data['icon'] = $this->cleanIcon($data['icon']);
+        }
+
+        $skill = Skill::create($data);
+
+        ActivityLog::log('create', 'skills', 'أضاف مهارة جديدة', 'skill', $skill->id);
+
         return $this->created(new SkillResource($skill));
     }
 
     public function show(string $id)
     {
         $skill = Skill::find($id);
-        if (!$skill) return $this->notFound('المهارة غير موجودة');
+        if (!$skill) {
+            return $this->notFound('المهارة غير موجودة');
+        }
         return $this->success(new SkillResource($skill));
     }
 
-    public function update(Request $request, string $id)
+    public function update(Request $request, $id)
     {
-        $skill = Skill::find($id);
-        if (!$skill) return $this->notFound('المهارة غير موجودة');
-        $skill->update($request->all());
-        ActivityLog::log('update', 'skills', 'عدّل مهارة', 'skill', $id);
-        return $this->success(new SkillResource($skill), 'تم التحديث');
+        $skill = Skill::findOrFail($id);
+
+        $request->validate([
+            'category' => 'sometimes|required|array',
+        ]);
+
+        $data = $request->all();
+
+        // ✅ تنظيف الأيقونة
+        if (isset($data['icon'])) {
+            $data['icon'] = $this->cleanIcon($data['icon']);
+        }
+
+        $skill->update($data);
+
+        ActivityLog::log('update', 'skills', 'حدّث مهارة', 'skill', $skill->id);
+
+        return $this->success(new SkillResource($skill), 'تم التحديث بنجاح');
     }
 
-    public function destroy(string $id)
+    public function destroy($id)
     {
-        $skill = Skill::find($id);
-        if (!$skill) return $this->notFound('المهارة غير موجودة');
+        $skill = Skill::findOrFail($id);
         $skill->delete();
+
         ActivityLog::log('delete', 'skills', 'حذف مهارة', 'skill', $id);
-        return $this->success(null, 'تم الحذف');
+
+        return $this->success(null, 'تم الحذف بنجاح');
+    }
+
+    /**
+     * ✅ تنظيف الأيقونة قبل الحفظ
+     */
+    private function cleanIcon(?string $icon): ?string
+    {
+        if (empty($icon)) {
+            return null;
+        }
+
+        // ✅ إذا كان emoji - احفظه كما هو
+        if (preg_match('/^[\x{1F000}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{1F300}-\x{1F5FF}\x{1F600}-\x{1F64F}\x{1F680}-\x{1F6FF}]{1,4}$/u', $icon)) {
+            return $icon;
+        }
+
+        // ✅ إذا كان رابط كامل - استخرج المسار النسبي فقط
+        if (str_starts_with($icon, 'http://') || str_starts_with($icon, 'https://')) {
+            // استخرج الجزء بعد /storage/
+            if (preg_match('#/storage/(.+)$#', $icon, $matches)) {
+                return $matches[1]; // مثال: media/icons/image.png
+            }
+        }
+
+        // ✅ إزالة /storage/ من البداية إن وجد
+        $icon = preg_replace('#^/?storage/#', '', $icon);
+
+        return $icon;
     }
 }

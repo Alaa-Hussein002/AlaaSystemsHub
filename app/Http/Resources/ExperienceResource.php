@@ -24,6 +24,7 @@ class ExperienceResource extends JsonResource
             'achievements'     => $this->achievements,
             'is_published'     => $this->is_published,
             'technologies_used'=> $this->technologies_used,
+            'sort_order' => $this->sort_order ?? 0,
         ];
     }
 }

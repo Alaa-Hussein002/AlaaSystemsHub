@@ -1,17 +1,16 @@
 <?php
+// app/Models/User.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Auth\User as MongoUser;
-use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
-class User extends MongoUser
+class User extends Authenticatable
 {
-    use HasApiTokens, Notifiable;
-
-    protected $connection = 'mongodb';
-    protected $collection = 'users';
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
         'name',
@@ -19,10 +18,10 @@ class User extends MongoUser
         'password',
         'phone',
         'avatar',
-        'type',          // admin | customer
+        'type',
         'role_id',
-        'status',        // active | inactive | banned
-        'profile',       // embedded document
+        'status',
+        'profile',
         'wallet_balance',
         'last_login_at',
         'last_login_ip',
@@ -35,73 +34,62 @@ class User extends MongoUser
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'last_login_at'     => 'datetime',
-        'password'          => 'hashed',
-        'wallet_balance'    => 'decimal:2',
-        'profile'           => 'array',
+        'last_login_at' => 'datetime',
+        'password' => 'hashed',
+        'wallet_balance' => 'decimal:2',
+        'profile' => 'array',
     ];
 
-    // ====================================
-    // العلاقات (Relationships)
-    // ====================================
-
+    // Relationships
     public function role()
     {
-        return $this->belongsTo(Role::class, 'role_id');
+        return $this->belongsTo(Role::class);
     }
 
     public function orders()
     {
-        return $this->hasMany(Order::class, 'user_id');
+        return $this->hasMany(Order::class);
     }
 
     public function payments()
     {
-        return $this->hasMany(Payment::class, 'user_id');
+        return $this->hasMany(Payment::class);
     }
 
     public function cart()
     {
-        return $this->hasOne(Cart::class, 'user_id');
+        return $this->hasOne(Cart::class);
     }
 
     public function shippingAddresses()
     {
-        return $this->hasMany(ShippingAddress::class, 'user_id');
+        return $this->hasMany(ShippingAddress::class);
     }
 
     public function gameScores()
     {
-        return $this->hasMany(GameScore::class, 'user_id');
+        return $this->hasMany(GameScore::class);
     }
 
     public function notifications()
     {
-        return $this->hasMany(Notification::class, 'user_id');
+        return $this->hasMany(Notification::class);
     }
 
     public function customerOffers()
     {
-        return $this->hasMany(CustomerOffer::class, 'user_id');
+        return $this->hasMany(CustomerOffer::class);
     }
 
     public function activityLogs()
     {
-        return $this->hasMany(ActivityLog::class, 'user_id');
+        return $this->hasMany(ActivityLog::class);
     }
 
-    // ====================================
     // Helpers
-    // ====================================
-
     public function isAdmin(): bool
     {
         return $this->type === 'admin';
-    }
-
-    public function isSuperAdmin(): bool
-    {
-        return $this->type === 'admin' && $this->role?->name === 'super_admin';
     }
 
     public function isCustomer(): bool
@@ -116,12 +104,9 @@ class User extends MongoUser
 
     public function hasPermission(string $module, string $action): bool
     {
-        if ($this->isSuperAdmin()) return true;
+        if (!$this->role) return false;
 
-        $role = $this->role;
-        if (!$role) return false;
-
-        $permissions = collect($role->permissions ?? []);
+        $permissions = collect($this->role->permissions ?? []);
         $modulePerms = $permissions->firstWhere('module', $module);
 
         return $modulePerms && in_array($action, $modulePerms['actions'] ?? []);

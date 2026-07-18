@@ -1,25 +1,26 @@
 <?php
+// app/Models/Project.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Project extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'projects';
+    use HasFactory;
 
     protected $fillable = [
-        'title',             // { ar, en }
+        'title',
         'slug',
-        'description',       // { ar, en }
+        'description',
         'short_description',
         'category',
-        'tech_stack',        // array of { name, icon, color }
-        'features',          // array of strings
-        'media',             // { thumbnail, gallery[], demo_video, mockup_3d }
-        'links',             // { live_demo, github, documentation }
-        'status',            // completed | in_progress | planned
+        'tech_stack',
+        'features',
+        'media',
+        'links',
+        'status',
         'is_featured',
         'is_published',
         'sort_order',
@@ -32,33 +33,29 @@ class Project extends Model
     ];
 
     protected $casts = [
-        'title'         => 'array',
-        'description'   => 'array',
-        'tech_stack'    => 'array',
-        'features'      => 'array',
-        'media'         => 'array',
-        'links'         => 'array',
-        'tags'          => 'array',
-        'is_featured'   => 'boolean',
-        'is_published'  => 'boolean',
-        'sort_order'    => 'integer',
-        'views_count'   => 'integer',
-        'likes_count'   => 'integer',
+        'title' => 'array',
+        'description' => 'array',
+        'tech_stack' => 'array',
+        'features' => 'array',
+        'media' => 'array',
+        'links' => 'array',
+        'tags' => 'array',
+        'is_featured' => 'boolean',
+        'is_published' => 'boolean',
+        'sort_order' => 'integer',
+        'views_count' => 'integer',
+        'likes_count' => 'integer',
+        'start_date' => 'date',
+        'end_date' => 'date',
     ];
 
-    // ====================================
-    // العلاقات
-    // ====================================
-
+    // Relationships
     public function testimonials()
     {
-        return $this->hasMany(Testimonial::class, 'project_id');
+        return $this->hasMany(Testimonial::class);
     }
 
-    // ====================================
     // Scopes
-    // ====================================
-
     public function scopePublished($query)
     {
         return $query->where('is_published', true);
@@ -74,10 +71,7 @@ class Project extends Model
         return $query->orderBy('sort_order', 'asc');
     }
 
-    // ====================================
     // Helpers
-    // ====================================
-
     public function incrementViews()
     {
         $this->increment('views_count');

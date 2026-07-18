@@ -1,28 +1,29 @@
 <?php
+// app/Models/Order.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'orders';
+    use HasFactory;
 
     protected $fillable = [
         'order_number',
         'user_id',
-        'customer_info',     // embedded { name, email, phone }
-        'items',             // embedded array
-        'pricing',           // embedded { subtotal, discount, tax, shipping, total, currency }
+        'customer_info',
+        'items',
+        'pricing',
         'payment_method',
-        'payment_status',    // pending | paid | failed | refunded
-        'order_status',      // pending | confirmed | processing | shipped | delivered | completed | cancelled
-        'status_history',    // embedded array
-        'shipping_address',  // embedded or null
+        'payment_status',
+        'order_status',
+        'status_history',
+        'shipping_address',
         'shipping_method',
         'shipment_id',
-        'notes',             // { customer_note, admin_note }
+        'notes',
         'is_gift',
         'ip_address',
         'user_agent',
@@ -31,59 +32,47 @@ class Order extends Model
     ];
 
     protected $casts = [
-        'customer_info'  => 'array',
-        'items'          => 'array',
-        'pricing'        => 'array',
+        'customer_info' => 'array',
+        'items' => 'array',
+        'pricing' => 'array',
         'status_history' => 'array',
         'shipping_address' => 'array',
-        'notes'          => 'array',
-        'is_gift'        => 'boolean',
-        'completed_at'   => 'datetime',
-        'cancelled_at'   => 'datetime',
+        'notes' => 'array',
+        'is_gift' => 'boolean',
+        'completed_at' => 'datetime',
+        'cancelled_at' => 'datetime',
     ];
 
-    // ====================================
-    // العلاقات
-    // ====================================
-
+    // Relationships
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 
     public function payments()
     {
-        return $this->hasMany(Payment::class, 'order_id');
+        return $this->hasMany(Payment::class);
     }
 
     public function invoice()
     {
-        return $this->hasOne(Invoice::class, 'order_id');
+        return $this->hasOne(Invoice::class);
     }
 
     public function shipment()
     {
-        return $this->hasOne(Shipment::class, 'order_id');
+        return $this->hasOne(Shipment::class);
     }
 
-    // ====================================
     // Helpers
-    // ====================================
-
     public static function generateOrderNumber(): string
     {
         $year = date('Y');
         $last = static::where('order_number', 'like', "ORD-{$year}-%")
-                      ->orderBy('created_at', 'desc')
-                      ->first();
+            ->orderBy('created_at', 'desc')
+            ->first();
 
-        if ($last) {
-            $lastNum = intval(substr($last->order_number, -5));
-            $newNum = $lastNum + 1;
-        } else {
-            $newNum = 1;
-        }
-
+        $newNum = $last ? intval(substr($last->order_number, -5)) + 1 : 1;
         return sprintf("ORD-%s-%05d", $year, $newNum);
     }
 
@@ -91,14 +80,14 @@ class Order extends Model
     {
         $history = $this->status_history ?? [];
         $history[] = [
-            'status'     => $status,
-            'note'       => $note,
-            'changed_by' => $changedBy ? (string) $changedBy : null,
+            'status' => $status,
+            'note' => $note,
+            'changed_by' => $changedBy,
             'changed_at' => now()->toISOString(),
         ];
 
         $this->update([
-            'order_status'   => $status,
+            'order_status' => $status,
             'status_history' => $history,
         ]);
     }

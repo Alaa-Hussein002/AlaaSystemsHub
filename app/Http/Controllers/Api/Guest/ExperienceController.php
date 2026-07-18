@@ -1,6 +1,8 @@
 <?php
+// app/Http/Controllers/Api/Guest/ExperienceController.php
 
 namespace App\Http\Controllers\Api\Guest;
+
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ExperienceResource;
 use App\Models\Experience;
@@ -12,11 +14,11 @@ class ExperienceController extends Controller
 
     public function index()
     {
-        $experiences = Experience::published()->ordered()->get();
+        $experiences = Experience::where('is_published', true)
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('start_date', 'desc')
+            ->get();
 
-        return $this->success(
-            ExperienceResource::collection($experiences),
-            'الخبرات العملية'
-        );
+        return $this->success(ExperienceResource::collection($experiences));
     }
 }

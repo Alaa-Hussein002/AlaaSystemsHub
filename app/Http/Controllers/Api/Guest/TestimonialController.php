@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Api/Guest/TestimonialController.php
 
 namespace App\Http\Controllers\Api\Guest;
 
@@ -13,13 +14,10 @@ class TestimonialController extends Controller
 
     public function index()
     {
-        $testimonials = Testimonial::published()
-                                    ->ordered()
-                                    ->get();
+        $testimonials = Testimonial::where('is_published', true)
+            ->orderBy('sort_order', 'asc')
+            ->get();
 
-        return $this->success(
-            TestimonialResource::collection($testimonials),
-            'التوصيات'
-        );
+        return $this->success(TestimonialResource::collection($testimonials));
     }
 }

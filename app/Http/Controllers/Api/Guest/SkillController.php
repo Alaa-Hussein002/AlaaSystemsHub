@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Api/Guest/SkillController.php
 
 namespace App\Http\Controllers\Api\Guest;
 
@@ -13,11 +14,10 @@ class SkillController extends Controller
 
     public function index()
     {
-        $skills = Skill::published()->ordered()->get();
+        $skills = Skill::where('is_published', true)
+            ->orderBy('sort_order', 'asc')
+            ->get();
 
-        return $this->success(
-            SkillResource::collection($skills),
-            'قائمة المهارات'
-        );
+        return $this->success(SkillResource::collection($skills));
     }
 }

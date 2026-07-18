@@ -1,51 +1,48 @@
 <?php
+// app/Models/AnalyticsEvent.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class AnalyticsEvent extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'analytics_events';
+    use HasFactory;
 
     const UPDATED_AT = null;
 
     protected $fillable = [
-        'event_type',      // page_view | product_view | product_purchase | game_play | download
-        'event_category',  // portfolio | store | games | general
-        'target_type',     // project | product | game | page
+        'event_type',
+        'event_category',
+        'target_type',
         'target_id',
         'target_title',
-        'visitor',         // embedded { user_id, session_id, ip_hash, country, city }
-        'device',          // embedded { type, browser, os, screen_resolution }
-        'referrer',        // embedded { url, source, medium }
+        'visitor',
+        'device',
+        'referrer',
         'page_url',
         'duration_seconds',
         'metadata',
     ];
 
     protected $casts = [
-        'visitor'          => 'array',
-        'device'           => 'array',
-        'referrer'         => 'array',
-        'metadata'         => 'array',
+        'visitor' => 'array',
+        'device' => 'array',
+        'referrer' => 'array',
+        'metadata' => 'array',
         'duration_seconds' => 'integer',
     ];
-
-    // ====================================
-    // تسجيل حدث بسهولة
-    // ====================================
 
     public static function track(array $data): self
     {
         return static::create(array_merge($data, [
             'visitor' => array_merge($data['visitor'] ?? [], [
                 'session_id' => session()->getId(),
-                'ip_hash'    => md5(request()->ip()),
+                'ip_hash' => md5(request()->ip()),
             ]),
             'device' => [
-                'type'    => self::detectDeviceType(),
+                'type' => self::detectDeviceType(),
                 'browser' => request()->header('User-Agent'),
             ],
             'referrer' => [

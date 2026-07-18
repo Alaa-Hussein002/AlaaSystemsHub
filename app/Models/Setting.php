@@ -1,14 +1,15 @@
 <?php
+// app/Models/Setting.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
 class Setting extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'settings';
+    use HasFactory;
 
     protected $fillable = [
         'group',
@@ -20,9 +21,6 @@ class Setting extends Model
         'value' => 'array',
     ];
 
-    /**
-     * الحصول على إعداد معين
-     */
     public static function getValue(string $key, $default = null)
     {
         return Cache::remember("setting_{$key}", 3600, function () use ($key, $default) {
@@ -31,9 +29,6 @@ class Setting extends Model
         });
     }
 
-    /**
-     * تحديث أو إنشاء إعداد
-     */
     public static function setValue(string $group, string $key, $value): self
     {
         Cache::forget("setting_{$key}");
@@ -44,14 +39,11 @@ class Setting extends Model
         );
     }
 
-    /**
-     * الحصول على جميع إعدادات مجموعة
-     */
     public static function getGroup(string $group): array
     {
         return static::where('group', $group)
-                     ->get()
-                     ->pluck('value', 'key')
-                     ->toArray();
+            ->get()
+            ->pluck('value', 'key')
+            ->toArray();
     }
 }

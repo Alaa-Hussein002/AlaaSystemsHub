@@ -100,7 +100,7 @@ class PaymentService
             'user_id'        => (string) $order->user_id,
             'payment_id'     => (string) $payment->_id,
             'seller_info'    => [
-                'name'    => $settings['site_name']['ar'] ?? 'Alaa Systems Hub',
+                'name'    => $settings['site_name']['ar'] ?? 'Alaa Hussein',
                 'email'   => 'billing@alaasystems.com',
                 'phone'   => '+967771234567',
                 'address' => 'صنعاء، اليمن',

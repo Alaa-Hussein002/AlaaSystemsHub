@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Api/Admin/ProfileController.php
 
 namespace App\Http\Controllers\Api\Admin;
 

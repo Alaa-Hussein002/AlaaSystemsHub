@@ -1,13 +1,14 @@
 <?php
+// app/Models/Notification.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Notification extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'notifications';
+    use HasFactory;
 
     const UPDATED_AT = null;
 
@@ -24,16 +25,16 @@ class Notification extends Model
     ];
 
     protected $casts = [
-        'title'   => 'array',
+        'title' => 'array',
         'message' => 'array',
-        'data'    => 'array',
+        'data' => 'array',
         'is_read' => 'boolean',
         'read_at' => 'datetime',
     ];
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 
     public function markAsRead()
@@ -49,7 +50,7 @@ class Notification extends Model
         return $query->where('is_read', false);
     }
 
-    public function scopeForUser($query, string $userId)
+    public function scopeForUser($query, int $userId)
     {
         return $query->where('user_id', $userId);
     }

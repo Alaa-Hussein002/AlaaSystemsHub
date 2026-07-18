@@ -1,13 +1,14 @@
 <?php
+// app/Models/ContactMessage.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class ContactMessage extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'contact_messages';
+    use HasFactory;
 
     protected $fillable = [
         'name',
@@ -15,9 +16,9 @@ class ContactMessage extends Model
         'phone',
         'subject',
         'message',
-        'category',      // project_inquiry | support | partnership | other
-        'priority',      // low | normal | high | urgent
-        'status',        // unread | read | replied | archived | spam
+        'category',
+        'priority',
+        'status',
         'reply',
         'replied_at',
         'replied_by',
@@ -28,8 +29,8 @@ class ContactMessage extends Model
 
     protected $casts = [
         'attachments' => 'array',
-        'is_spam'     => 'boolean',
-        'replied_at'  => 'datetime',
+        'is_spam' => 'boolean',
+        'replied_at' => 'datetime',
     ];
 
     public function repliedByUser()

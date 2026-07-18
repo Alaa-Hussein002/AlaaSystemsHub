@@ -1,13 +1,14 @@
 <?php
+// app/Models/CustomerOffer.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class CustomerOffer extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'customer_offers';
+    use HasFactory;
 
     protected $fillable = [
         'title',
@@ -26,17 +27,19 @@ class CustomerOffer extends Model
     ];
 
     protected $casts = [
-        'product_ids'    => 'array',
-        'message'        => 'array',
+        'product_ids' => 'array',
+        'message' => 'array',
         'discount_value' => 'decimal:2',
-        'is_used'        => 'boolean',
-        'is_active'      => 'boolean',
-        'used_at'        => 'datetime',
+        'is_used' => 'boolean',
+        'is_active' => 'boolean',
+        'start_date' => 'datetime',
+        'end_date' => 'datetime',
+        'used_at' => 'datetime',
     ];
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 
     public function creator()

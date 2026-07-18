@@ -52,6 +52,12 @@ return [
 
     'channels' => [
 
+        'whatsapp' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/whatsapp.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+        ],
+
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', (string) env('LOG_STACK', 'single')),

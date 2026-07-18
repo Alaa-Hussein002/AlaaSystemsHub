@@ -1,13 +1,18 @@
 <?php
+// app/Models/Certificate.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+// use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Certificate extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'certificates';
+    use HasFactory;
+
+    // ✅ تحديد اسم الجدول بشكل صريح
+    protected $table = 'certificates';
 
     protected $fillable = [
         'title',
@@ -26,14 +31,17 @@ class Certificate extends Model
 
     protected $casts = [
         'skills_gained' => 'array',
-        'has_expiry'    => 'boolean',
-        'is_published'  => 'boolean',
-        'sort_order'    => 'integer',
+        'has_expiry' => 'boolean',
+        'is_published' => 'boolean',
+        'sort_order' => 'integer',
+        'issue_date' => 'date',
+        'expiry_date' => 'date',
     ];
 
     public function scopeOrdered($query)
     {
-        return $query->orderBy('sort_order', 'asc');
+        return $query->orderBy('sort_order', 'asc')
+                    ->orderBy('issue_date', 'desc');
     }
 
     public function scopePublished($query)

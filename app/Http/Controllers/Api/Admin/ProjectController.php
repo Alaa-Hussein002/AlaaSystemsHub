@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Api/Admin/ProjectController.php
 
 namespace App\Http\Controllers\Api\Admin;
 
@@ -16,16 +17,18 @@ class ProjectController extends Controller
 
     public function index(Request $request)
     {
-        $query = Project::orderBy('sort_order', 'asc');
+        $query = Project::orderBy('sort_order', 'asc')->orderBy('created_at', 'desc');
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
+        
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('title.ar', 'like', "%{$search}%")
-                  ->orWhere('title.en', 'like', "%{$search}%");
+                // ✅ FIXED: MySQL JSON query syntax
+                $q->where('title->ar', 'like', "%{$search}%")
+                  ->orWhere('title->en', 'like', "%{$search}%");
             });
         }
 
@@ -42,15 +45,26 @@ class ProjectController extends Controller
         ]);
 
         $data = $request->all();
+        
+        // Generate slug if not provided
         if (empty($data['slug'])) {
             $data['slug'] = Str::slug($data['title']['en'] ?? $data['title']['ar']);
         }
+        
+        // Initialize counters
         $data['views_count'] = 0;
         $data['likes_count'] = 0;
 
         $project = Project::create($data);
 
-        ActivityLog::log('create', 'projects', "أضاف مشروع: " . ($data['title']['ar'] ?? ''), 'project', $project->_id);
+        // ✅ FIXED: Use $project->id instead of $project->_id
+        ActivityLog::log(
+            'create', 
+            'projects', 
+            "أضاف مشروع: " . ($data['title']['ar'] ?? ''), 
+            'project', 
+            $project->id
+        );
 
         return $this->created(new ProjectResource($project), 'تم إنشاء المشروع');
     }
@@ -58,7 +72,9 @@ class ProjectController extends Controller
     public function show(string $id)
     {
         $project = Project::find($id);
-        if (!$project) return $this->notFound('المشروع غير موجود');
+        if (!$project) {
+            return $this->notFound('المشروع غير موجود');
+        }
 
         $project->load('testimonials');
         return $this->success(new ProjectResource($project));
@@ -67,15 +83,24 @@ class ProjectController extends Controller
     public function update(Request $request, string $id)
     {
         $project = Project::find($id);
-        if (!$project) return $this->notFound('المشروع غير موجود');
+        if (!$project) {
+            return $this->notFound('المشروع غير موجود');
+        }
 
+        // ✅ FIXED: Validation with SQL primary key
         $request->validate([
-            'slug' => 'nullable|string|unique:projects,slug,' . $id . ',_id',
+            'slug' => 'nullable|string|unique:projects,slug,' . $id . ',id',
         ]);
 
         $project->update($request->all());
 
-        ActivityLog::log('update', 'projects', "عدّل مشروع: " . ($project->title['ar'] ?? ''), 'project', $id);
+        ActivityLog::log(
+            'update', 
+            'projects', 
+            "عدّل مشروع: " . ($project->title['ar'] ?? ''), 
+            'project', 
+            $id
+        );
 
         return $this->success(new ProjectResource($project), 'تم تحديث المشروع');
     }
@@ -83,7 +108,9 @@ class ProjectController extends Controller
     public function destroy(string $id)
     {
         $project = Project::find($id);
-        if (!$project) return $this->notFound('المشروع غير موجود');
+        if (!$project) {
+            return $this->notFound('المشروع غير موجود');
+        }
 
         $title = $project->title['ar'] ?? '';
         $project->delete();

@@ -1,19 +1,20 @@
 <?php
+// app/Models/Coupon.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Coupon extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'coupons';
+    use HasFactory;
 
     protected $fillable = [
         'code',
         'name',
         'description',
-        'discount_type',         // percentage | fixed
+        'discount_type',
         'discount_value',
         'minimum_order_amount',
         'maximum_discount_amount',
@@ -30,16 +31,18 @@ class Coupon extends Model
     ];
 
     protected $casts = [
-        'discount_value'         => 'decimal:2',
-        'minimum_order_amount'   => 'decimal:2',
-        'maximum_discount_amount'=> 'decimal:2',
-        'applicable_products'    => 'array',
-        'applicable_categories'  => 'array',
-        'applicable_users'       => 'array',
-        'usage_limit'            => 'integer',
-        'usage_per_user'         => 'integer',
-        'used_count'             => 'integer',
-        'is_active'              => 'boolean',
+        'discount_value' => 'decimal:2',
+        'minimum_order_amount' => 'decimal:2',
+        'maximum_discount_amount' => 'decimal:2',
+        'applicable_products' => 'array',
+        'applicable_categories' => 'array',
+        'applicable_users' => 'array',
+        'usage_limit' => 'integer',
+        'usage_per_user' => 'integer',
+        'used_count' => 'integer',
+        'is_active' => 'boolean',
+        'start_date' => 'datetime',
+        'end_date' => 'datetime',
     ];
 
     public function isValid(): bool

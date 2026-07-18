@@ -1,30 +1,31 @@
 <?php
+// app/Models/Product.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'products';
+    use HasFactory;
 
     protected $fillable = [
-        'name',              // { ar, en }
+        'name',
         'slug',
-        'description',       // { ar, en }
+        'description',
         'short_description',
         'category_id',
-        'product_type',      // digital | physical
-        'pricing',           // embedded { price, compare_at_price, currency, is_free, discount_percentage }
-        'media',             // embedded { thumbnail, gallery[], demo_video, preview_url }
-        'digital_asset',     // embedded { file_url, file_size, file_format, version, download_limit }
-        'physical_details',  // embedded (for future) { weight, dimensions, sku }
-        'attributes',        // dynamic embedded document
+        'product_type',
+        'pricing',
+        'media',
+        'digital_asset',
+        'physical_details',
+        'attributes',
         'tags',
-        'stats',             // embedded { views_count, sales_count, rating_average, etc. }
-        'stock',             // embedded { track_inventory, quantity, allow_backorder }
-        'status',            // draft | published | archived
+        'stats',
+        'stock',
+        'status',
         'is_featured',
         'is_published',
         'sort_order',
@@ -32,34 +33,29 @@ class Product extends Model
     ];
 
     protected $casts = [
-        'name'             => 'array',
-        'description'      => 'array',
-        'pricing'          => 'array',
-        'media'            => 'array',
-        'digital_asset'    => 'array',
+        'name' => 'array',
+        'description' => 'array',
+        'pricing' => 'array',
+        'media' => 'array',
+        'digital_asset' => 'array',
         'physical_details' => 'array',
-        'attributes'       => 'array',
-        'tags'             => 'array',
-        'stock'            => 'array',
-        'is_featured'      => 'boolean',
-        'is_published'        => 'boolean',
-        'sort_order'       => 'integer',
-        'published_at'     => 'datetime',
+        'attributes' => 'array',
+        'tags' => 'array',
+        'stats' => 'array',
+        'stock' => 'array',
+        'is_featured' => 'boolean',
+        'is_published' => 'boolean',
+        'sort_order' => 'integer',
+        'published_at' => 'datetime',
     ];
 
-    // ====================================
-    // العلاقات
-    // ====================================
-
+    // Relationships
     public function category()
     {
         return $this->belongsTo(ProductCategory::class, 'category_id');
     }
 
-    // ====================================
     // Scopes
-    // ====================================
-
     public function scopePublished($query)
     {
         return $query->where('status', 'published')->where('is_published', true);
@@ -80,10 +76,7 @@ class Product extends Model
         return $query->where('is_featured', true);
     }
 
-    // ====================================
-    // Accessors
-    // ====================================
-
+    // Helpers
     public function getPriceAttribute()
     {
         return $this->pricing['price'] ?? 0;
@@ -92,30 +85,20 @@ class Product extends Model
     public function getIsOnSaleAttribute(): bool
     {
         return !empty($this->pricing['compare_at_price']) &&
-               $this->pricing['compare_at_price'] > $this->pricing['price'];
+            $this->pricing['compare_at_price'] > $this->pricing['price'];
     }
 
-    // ====================================
-    // Helpers
-    // ====================================
-
-        public function incrementViews()
+    public function incrementViews()
     {
-        // إذا كان الحقل غير موجود أو ليس مصفوفة (مثلاً محفوظ بالخطأ كنص فارغ)، اجعله مصفوفة فارغة
         $stats = is_array($this->stats) ? $this->stats : [];
-        
         $stats['views_count'] = ($stats['views_count'] ?? 0) + 1;
-        
         $this->update(['stats' => $stats]);
     }
 
     public function incrementSales(int $count = 1)
     {
-        // نفس الحماية لدالة المبيعات
         $stats = is_array($this->stats) ? $this->stats : [];
-        
         $stats['sales_count'] = ($stats['sales_count'] ?? 0) + $count;
-        
         $this->update(['stats' => $stats]);
     }
 }

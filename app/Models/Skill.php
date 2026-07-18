@@ -1,27 +1,28 @@
 <?php
+// app/Models/Skill.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Skill extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'skills';
+    use HasFactory;
 
     protected $fillable = [
-        'category',       // {ar, en}
+        'category',
         'icon',
         'color',
         'sort_order',
-        'is_published',   // ← هذا كان ناقص!
-        'technologies',   // array of {name, proficiency, years_of_experience, is_featured}
+        'is_published',
+        'technologies',
     ];
-    
+
     protected $casts = [
-        'category'     => 'array',
+        'category' => 'array',
         'technologies' => 'array',
-        'sort_order'   => 'integer',
+        'sort_order' => 'integer',
         'is_published' => 'boolean',
     ];
 

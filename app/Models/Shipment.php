@@ -1,13 +1,14 @@
 <?php
+// app/Models/Shipment.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Shipment extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'shipments';
+    use HasFactory;
 
     protected $fillable = [
         'shipment_number',
@@ -28,36 +29,37 @@ class Shipment extends Model
     ];
 
     protected $casts = [
-        'dimensions'     => 'array',
+        'dimensions' => 'array',
         'status_history' => 'array',
-        'shipping_cost'  => 'decimal:2',
-        'weight'         => 'decimal:2',
-        'delivered_at'   => 'datetime',
-        'shipped_at'     => 'datetime',
+        'shipping_cost' => 'decimal:2',
+        'weight' => 'decimal:2',
+        'estimated_delivery' => 'date',
+        'delivered_at' => 'datetime',
+        'shipped_at' => 'datetime',
     ];
 
     public function order()
     {
-        return $this->belongsTo(Order::class, 'order_id');
+        return $this->belongsTo(Order::class);
     }
 
     public function shippingMethod()
     {
-        return $this->belongsTo(ShippingMethod::class, 'shipping_method_id');
+        return $this->belongsTo(ShippingMethod::class);
     }
 
     public function addTracking(string $status, string $location, string $note = '')
     {
         $history = $this->status_history ?? [];
         $history[] = [
-            'status'    => $status,
-            'location'  => $location,
-            'note'      => $note,
+            'status' => $status,
+            'location' => $location,
+            'note' => $note,
             'timestamp' => now()->toISOString(),
         ];
 
         $this->update([
-            'status'         => $status,
+            'status' => $status,
             'status_history' => $history,
         ]);
     }

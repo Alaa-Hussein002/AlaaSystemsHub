@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/Api/Guest/CertificateController.php
 
 namespace App\Http\Controllers\Api\Guest;
 
@@ -13,11 +14,11 @@ class CertificateController extends Controller
 
     public function index()
     {
-        $certificates = Certificate::published()->ordered()->get();
+        $certificates = Certificate::where('is_published', true)
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('issue_date', 'desc')
+            ->get();
 
-        return $this->success(
-            CertificateResource::collection($certificates),
-            'الشهادات'
-        );
+        return $this->success(CertificateResource::collection($certificates));
     }
 }

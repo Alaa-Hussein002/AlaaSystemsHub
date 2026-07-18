@@ -8,6 +8,9 @@ use App\Models\Media;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class MediaController extends Controller
 {
@@ -16,8 +19,14 @@ class MediaController extends Controller
     public function index(Request $request)
     {
         $query = Media::orderBy('created_at', 'desc');
-        if ($request->has('folder')) $query->where('folder', $request->folder);
-        if ($request->has('type'))   $query->images();
+        
+        if ($request->has('folder')) {
+            $query->where('folder', $request->folder);
+        }
+        
+        if ($request->has('type')) {
+            $query->images();
+        }
 
         $media = $query->get();
         return $this->success($media);
@@ -26,50 +35,103 @@ class MediaController extends Controller
     public function upload(Request $request)
     {
         $request->validate([
-            'file'   => 'required|file|max:10240',
-            'folder' => 'nullable|string',
-            'alt_text' => 'nullable|string',
+            'file'     => 'required|file|max:10240',
+            'folder'   => 'nullable|string|max:50',
+            'alt_text' => 'nullable|string|max:255',
         ]);
 
-        $file = $request->file('file');
-        $folder = $request->get('folder', 'general');
-        $path = $file->store("media/{$folder}", 'public');
+        try {
+            $file = $request->file('file');
+            $folder = Str::slug($request->get('folder', 'general'));
+            
+            // ✅ توليد اسم فريد للملف
+            $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
+            
+            // ✅ حفظ الملف
+            $filePath = $file->storeAs("media/{$folder}", $fileName, 'public');
+            
+            // ✅ توليد الرابط الكامل
+            $fileUrl = Storage::url($filePath);
+            
+            // ✅ إنشاء السجل
+            $media = Media::create([
+                'original_name'   => $file->getClientOriginalName(),
+                'file_name'       => $fileName,
+                'file_path'       => $filePath,
+                'file_url'        => $fileUrl, // ✅ رابط كامل
+                'mime_type'       => $file->getMimeType(),
+                'file_size'       => $file->getSize(),
+                'file_size_human' => $this->humanFileSize($file->getSize()),
+                'alt_text'        => $request->alt_text,
+                'folder'          => $folder,
+                'disk'            => 'public',
+                'uploaded_by'     => Auth::id(),
+            ]);
 
-        $media = Media::create([
-            'original_name'  => $file->getClientOriginalName(),
-            'file_name'      => basename($path),
-            'file_path'      => $path,
-            'file_url'       => Storage::url($path),
-            'mime_type'      => $file->getMimeType(),
-            'file_size'      => $file->getSize(),
-            'file_size_human'=> $this->humanFileSize($file->getSize()),
-            'alt_text'       => $request->alt_text,
-            'folder'         => $folder,
-            'disk'           => 'public',
-            'uploaded_by' => (string) $request->user()->_id,
-        ]);
+            ActivityLog::log('create', 'media', "رفع ملف: {$file->getClientOriginalName()}");
 
-        ActivityLog::log('create', 'media', "رفع ملف: {$file->getClientOriginalName()}");
+            return $this->created($media, 'تم رفع الملف بنجاح');
 
-        return $this->created($media, 'تم رفع الملف');
+        } catch (\Exception $e) {
+            Log::error('Media upload error: ' . $e->getMessage());
+            return $this->error('فشل رفع الملف: ' . $e->getMessage(), 500);
+        }
     }
 
     public function destroy(string $id)
     {
+        try {
+            $media = Media::find($id);
+            
+            if (!$media) {
+                return $this->notFound('الملف غير موجود');
+            }
+
+            // حذف الملف الفعلي
+            if (Storage::disk('public')->exists($media->file_path)) {
+                Storage::disk('public')->delete($media->file_path);
+            }
+
+            $originalName = $media->original_name;
+            $media->delete();
+
+            ActivityLog::log('delete', 'media', "حذف ملف: {$originalName}");
+
+            return $this->success(null, 'تم حذف الملف بنجاح');
+
+        } catch (\Exception $e) {
+            Log::error('Media delete error: ' . $e->getMessage());
+            return $this->error('فشل حذف الملف', 500);
+        }
+    }
+
+    /**
+     * عرض الملف مباشرة
+     */
+    public function show(string $id)
+    {
         $media = Media::find($id);
-        if (!$media) return $this->notFound('الملف غير موجود');
+        
+        if (!$media) {
+            return $this->notFound('الملف غير موجود');
+        }
 
-        Storage::disk($media->disk ?? 'public')->delete($media->file_path);
-        $media->delete();
+        $path = Storage::disk('public')->path($media->file_path);
 
-        ActivityLog::log('delete', 'media', "حذف ملف: {$media->original_name}");
-        return $this->success(null, 'تم الحذف');
+        if (!file_exists($path)) {
+            return $this->notFound('الملف غير موجود على الخادم');
+        }
+
+        return response()->file($path);
     }
 
     private function humanFileSize($bytes): string
     {
-        $units = ['B', 'KB', 'MB', 'GB'];
-        $factor = floor((strlen($bytes) - 1) / 3);
-        return sprintf("%.1f %s", $bytes / pow(1024, $factor), $units[$factor]);
+        if ($bytes == 0) return '0 B';
+        
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $factor = floor((strlen((string)$bytes) - 1) / 3);
+        
+        return sprintf("%.1f %s", $bytes / pow(1024, $factor), $units[$factor] ?? 'TB');
     }
 }

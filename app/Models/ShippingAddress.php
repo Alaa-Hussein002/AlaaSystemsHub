@@ -1,13 +1,14 @@
 <?php
+// app/Models/ShippingAddress.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class ShippingAddress extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'shipping_addresses';
+    use HasFactory;
 
     protected $fillable = [
         'user_id',
@@ -28,11 +29,11 @@ class ShippingAddress extends Model
 
     protected $casts = [
         'coordinates' => 'array',
-        'is_default'  => 'boolean',
+        'is_default' => 'boolean',
     ];
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 }

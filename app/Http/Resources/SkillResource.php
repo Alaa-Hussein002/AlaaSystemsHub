@@ -2,21 +2,21 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Request;
+use App\Helpers\IconHelper;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class SkillResource extends JsonResource
 {
-    public function toArray(Request $request): array
+    public function toArray($request)
     {
         return [
-            'id'           => (string) $this->_id,
-            'category'     => $this->category,
-            'icon'         => $this->icon,
-            'color'        => $this->color,
-            'technologies' => $this->technologies,
-            'is_published' => $this->is_published,
-            'sort_order'   => $this->sort_order,
+            'id' => $this->id,
+            'category' => $this->category ?? ['ar' => '', 'en' => ''],
+            'icon' => IconHelper::format($this->icon),
+            'color' => $this->color ?? '#3b82f6',
+            'sort_order' => $this->sort_order ?? 0,
+            'is_published' => $this->is_published ?? true,
+            'technologies' => $this->technologies ?? [],
         ];
     }
 }

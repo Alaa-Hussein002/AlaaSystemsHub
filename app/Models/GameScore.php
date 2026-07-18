@@ -1,15 +1,16 @@
 <?php
+// app/Models/GameScore.php
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class GameScore extends Model
 {
-    protected $connection = 'mongodb';
-    protected $collection = 'game_scores';
+    use HasFactory;
 
-    const UPDATED_AT = null; // لا نحتاج updated_at
+    const UPDATED_AT = null;
 
     protected $fillable = [
         'game_id',
@@ -25,12 +26,12 @@ class GameScore extends Model
     ];
 
     protected $casts = [
-        'score'               => 'integer',
-        'level_reached'       => 'integer',
+        'score' => 'integer',
+        'level_reached' => 'integer',
         'time_played_seconds' => 'integer',
-        'game_data'           => 'array',
-        'device_info'         => 'array',
-        'is_verified'         => 'boolean',
+        'game_data' => 'array',
+        'device_info' => 'array',
+        'is_verified' => 'boolean',
     ];
 
     public function game()
@@ -40,6 +41,6 @@ class GameScore extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 }
