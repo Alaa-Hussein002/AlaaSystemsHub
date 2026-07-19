@@ -61,30 +61,52 @@ use App\Http\Controllers\Api\Public\ArticleController as PublicArticleController
 // ========================================
 // 🏥 Health Check
 // ========================================
+
 Route::get('/health', function() {
     try {
         DB::connection()->getPdo();
         $connected = true;
+        $error = null;
     } catch (\Exception $e) {
         $connected = false;
+        $error = $e->getMessage();
     }
     
     return response()->json([
         'status' => 'ok',
         'database' => $connected ? 'connected' : 'disconnected',
+        'db_error' => $error,
+        'env' => [
+            'APP_ENV' => config('app.env'),
+            'DB_HOST' => config('database.connections.mysql.host'),
+            'DB_PORT' => config('database.connections.mysql.port'),
+            'DB_DATABASE' => config('database.connections.mysql.database'),
+        ],
         'timestamp' => now()->toISOString(),
     ]);
 });
 
+// Check data endpoint
 Route::get('/check-data', function() {
-    return response()->json([
-        'tables' => DB::select('SHOW TABLES'),
-        'users_count' => DB::table('users')->count(),
-        'roles_count' => DB::table('roles')->count(),
-        'admin_exists' => DB::table('users')
-            ->where('email', 'ala.hussein002@gmail.com')
-            ->exists(),
-    ]);
+    try {
+        $tables = DB::select('SHOW TABLES');
+        $users = DB::table('users')->count();
+        
+        return response()->json([
+            'status' => 'success',
+            'tables_count' => count($tables),
+            'users_count' => $users,
+            'tables' => array_map(function($t) {
+                return array_values((array)$t)[0];
+            }, $tables)
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
 });
 
 // ========================================
