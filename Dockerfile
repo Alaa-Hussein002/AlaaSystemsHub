@@ -1,4 +1,3 @@
-# Dockerfile (النسخة المحدثة)
 FROM php:8.2-fpm-alpine
 
 # Install system dependencies
@@ -11,7 +10,7 @@ RUN apk add --no-cache \
     unzip \
     mysql-client \
     nginx \
-    supervisor\
+    supervisor \
     ca-certificates
 
 # Install PHP extensions
@@ -26,8 +25,17 @@ WORKDIR /var/www
 # Copy application files
 COPY . .
 
-# Install dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Install dependencies with increased timeout
+RUN composer install \
+    --no-dev \
+    --optimize-autoloader \
+    --no-interaction \
+    --no-progress \
+    --prefer-dist \
+    --no-scripts
+
+# Run post-install scripts separately
+RUN composer run-script post-autoload-dump --no-interaction || true
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www \
@@ -38,13 +46,10 @@ RUN chown -R www-data:www-data /var/www \
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/default.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# Create startup script
 COPY docker/startup.sh /usr/local/bin/startup.sh
+
 RUN chmod +x /usr/local/bin/startup.sh
 
-# Expose port
 EXPOSE 8080
 
-# Start with custom script
 CMD ["/usr/local/bin/startup.sh"]
