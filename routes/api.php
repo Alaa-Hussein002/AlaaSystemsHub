@@ -56,65 +56,36 @@ use App\Http\Controllers\Api\Admin\MediaController;
 use App\Http\Controllers\Api\Admin\ArticleController as AdminArticleController;
 use App\Http\Controllers\Api\Public\ArticleController as PublicArticleController;
 
-// ========================================
-// 🔧 Temporary Setup Endpoint
-// احذفه بعد تشغيل الـ Setup!
-// ========================================
-Route::get('/setup-database-now-please', function() {
-    try {
-        $results = [];
-        
-        // Run migrations
-        Artisan::call('migrate', ['--force' => true]);
-        $results['migrations'] = Artisan::output();
-        
-        // Seed roles
-        Artisan::call('db:seed', [
-            '--class' => 'RoleSeeder',
-            '--force' => true
-        ]);
-        $results['roles'] = Artisan::output();
-        
-        // Seed admin user
-        Artisan::call('db:seed', [
-            '--class' => 'AdminUserSeeder',
-            '--force' => true
-        ]);
-        $results['admin'] = Artisan::output();
-        
-        // Storage link
-        Artisan::call('storage:link');
-        $results['storage'] = Artisan::output();
-        
-        // Cache
-        Artisan::call('config:cache');
-        Artisan::call('route:cache');
-        
-        // Check tables
-        $tables = DB::select('SHOW TABLES');
-        $results['tables_count'] = count($tables);
-        
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Database setup completed!',
-            'results' => $results,
-            'tables' => $tables
-        ]);
-        
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine()
-        ], 500);
-    }
-});
+
 
 // ========================================
 // 🏥 Health Check
 // ========================================
-Route::get('/health', [HealthCheckController::class, 'index']);
+Route::get('/health', function() {
+    try {
+        DB::connection()->getPdo();
+        $connected = true;
+    } catch (\Exception $e) {
+        $connected = false;
+    }
+    
+    return response()->json([
+        'status' => 'ok',
+        'database' => $connected ? 'connected' : 'disconnected',
+        'timestamp' => now()->toISOString(),
+    ]);
+});
+
+Route::get('/check-data', function() {
+    return response()->json([
+        'tables' => DB::select('SHOW TABLES'),
+        'users_count' => DB::table('users')->count(),
+        'roles_count' => DB::table('roles')->count(),
+        'admin_exists' => DB::table('users')
+            ->where('email', 'ala.hussein002@gmail.com')
+            ->exists(),
+    ]);
+});
 
 // ========================================
 // 🔐 Auth Routes
