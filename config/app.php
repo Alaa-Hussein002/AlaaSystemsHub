@@ -12,12 +12,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // تعطيل CSRF للـ API routes
-        $middleware->validateCsrfTokens(except: [
-            'api/*',
-            'sanctum/csrf-cookie',
-        ]);
-        
         $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions) {
