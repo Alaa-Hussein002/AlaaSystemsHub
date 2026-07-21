@@ -109,6 +109,23 @@ Route::get('/check-data', function() {
     }
 });
 
+Route::get('/test-ssl', function() {
+    try {
+        $ssl = DB::select("SHOW STATUS LIKE 'Ssl_cipher'");
+        $version = DB::select('SELECT VERSION() as version')[0]->version;
+        
+        return response()->json([
+            'mysql_version' => $version,
+            'ssl_status' => $ssl[0]->Value ?? 'Not using SSL',
+            'connection' => 'OK',
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 // ========================================
 // 🔐 Auth Routes
 // ========================================
