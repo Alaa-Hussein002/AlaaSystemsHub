@@ -24,65 +24,97 @@ fi
 
 # Display connection info
 echo "📊 Database Configuration:"
-echo "   Host: $DB_HOST"
-echo "   Port: $DB_PORT"
-echo "   Database: $DB_DATABASE"
-echo "   Username: $DB_USERNAME"
-echo "   SSL CA: $MYSQL_ATTR_SSL_CA"
+if [ -n "$DATABASE_URL" ]; then
+    echo "   Using DATABASE_URL: ${DATABASE_URL%%:*}://***"
+else
+    echo "   Host: $DB_HOST"
+    echo "   Port: $DB_PORT"
+    echo "   Database: $DB_DATABASE"
+    echo "   Username: $DB_USERNAME"
+fi
 
-# Clear config cache first
+# Test DNS resolution first
+echo "🔍 Testing DNS resolution..."
+if [ -n "$DB_HOST" ]; then
+    if nslookup "$DB_HOST" >/dev/null 2>&1; then
+        echo "✅ DNS resolution successful for $DB_HOST"
+        DB_IP=$(nslookup "$DB_HOST" | grep 'Address:' | tail -n1 | awk '{print $2}')
+        echo "   Resolved to: $DB_IP"
+    else
+        echo "❌ DNS resolution failed for $DB_HOST"
+        echo "🔧 Trying alternative DNS servers..."
+        
+        # Try with Google DNS
+        nslookup "$DB_HOST" 8.8.8.8 || echo "   Google DNS also failed"
+        
+        # Try with Cloudflare DNS
+        nslookup "$DB_HOST" 1.1.1.1 || echo "   Cloudflare DNS also failed"
+        
+        echo "⚠️  DNS issue detected - check Aiven service status"
+    fi
+fi
+
+# Test network connectivity
+echo "🌐 Testing network connectivity..."
+if [ -n "$DB_HOST" ]; then
+    if nc -zv -w5 "$DB_HOST" "$DB_PORT" 2>&1; then
+        echo "✅ Can reach $DB_HOST:$DB_PORT"
+    else
+        echo "❌ Cannot reach $DB_HOST:$DB_PORT"
+        echo "   Possible causes:"
+        echo "   1. Firewall blocking connection"
+        echo "   2. Service not publicly accessible"
+        echo "   3. Wrong hostname/port"
+    fi
+fi
+
+# Clear config cache
 echo "🧹 Clearing configuration cache..."
 php artisan config:clear || true
 
-# Test database connection with detailed error
+# Test database connection
 echo "⏳ Testing database connection..."
 
-# Simple connection test first
 php -r "
 try {
-    \$host = getenv('DB_HOST');
-    \$port = getenv('DB_PORT');
-    \$db = getenv('DB_DATABASE');
-    \$user = getenv('DB_USERNAME');
-    \$pass = getenv('DB_PASSWORD');
-    \$ssl_ca = getenv('MYSQL_ATTR_SSL_CA');
+    if (getenv('DATABASE_URL')) {
+        echo '📡 Using DATABASE_URL connection...' . PHP_EOL;
+        \$dsn = getenv('DATABASE_URL');
+        \$pdo = new PDO(\$dsn);
+    } else {
+        \$host = getenv('DB_HOST');
+        \$port = getenv('DB_PORT');
+        \$db = getenv('DB_DATABASE');
+        \$user = getenv('DB_USERNAME');
+        \$pass = getenv('DB_PASSWORD');
+        \$ssl_ca = getenv('MYSQL_ATTR_SSL_CA');
+        
+        \$dsn = \"mysql:host={\$host};port={\$port};dbname={\$db}\";
+        \$options = [
+            PDO::MYSQL_ATTR_SSL_CA => \$ssl_ca,
+            PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
+        ];
+        
+        \$pdo = new PDO(\$dsn, \$user, \$pass, \$options);
+    }
     
-    \$dsn = \"mysql:host={\$host};port={\$port};dbname={\$db}\";
-    \$options = [
-        PDO::MYSQL_ATTR_SSL_CA => \$ssl_ca,
-        PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
-    ];
-    
-    \$pdo = new PDO(\$dsn, \$user, \$pass, \$options);
-    echo \"✅ Direct PDO connection successful!\" . PHP_EOL;
+    echo '✅ Database connection successful!' . PHP_EOL;
     
     \$version = \$pdo->query('SELECT VERSION()')->fetchColumn();
-    echo \"📊 MySQL Version: \" . \$version . PHP_EOL;
+    echo '📊 MySQL Version: ' . \$version . PHP_EOL;
     
     \$ssl = \$pdo->query(\"SHOW STATUS LIKE 'Ssl_cipher'\")->fetch(PDO::FETCH_ASSOC);
-    echo \"🔒 SSL Cipher: \" . (\$ssl['Value'] ?? 'None') . PHP_EOL;
+    echo '🔒 SSL Cipher: ' . (\$ssl['Value'] ?? 'None') . PHP_EOL;
     
 } catch (PDOException \$e) {
-    echo \"❌ Direct connection failed!\" . PHP_EOL;
-    echo \"Error: \" . \$e->getMessage() . PHP_EOL;
-    exit(1);
-}
-"
-
-# Now test through Laravel
-echo "🔄 Testing Laravel DB connection..."
-php artisan tinker --execute="
-try {
-    \$pdo = DB::connection()->getPdo();
-    echo '✅ Laravel DB connection successful!' . PHP_EOL;
-} catch (\Exception \$e) {
-    echo '❌ Laravel DB connection failed!' . PHP_EOL;
+    echo '❌ Database connection failed!' . PHP_EOL;
     echo 'Error: ' . \$e->getMessage() . PHP_EOL;
+    echo 'Code: ' . \$e->getCode() . PHP_EOL;
     exit(1);
 }
 "
 
-# Run migrations
+# If we reached here, connection is OK
 echo "🗄️  Running migrations..."
 php artisan migrate --force --no-interaction
 

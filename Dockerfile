@@ -12,7 +12,9 @@ RUN apk add --no-cache \
     nginx \
     supervisor \
     ca-certificates \
-    openssl
+    openssl\
+    bind-tools \
+    netcat-openbsd
 
 # Install PHP extensions
 RUN docker-php-ext-install pdo_mysql zip exif pcntl bcmath gd
