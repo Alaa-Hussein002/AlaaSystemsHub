@@ -23,14 +23,14 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www
 
-# Copy application files
-COPY . .
+# Copy composer files first for better caching
+COPY composer.json composer.lock ./
 
-# Copy SSL certificate for Aiven
+# Copy SSL certificate early
 RUN mkdir -p /var/www/ssl
 COPY ssl/aiven-ca.pem /var/www/ssl/
 
-# Install dependencies with increased timeout
+# Install dependencies WITHOUT running scripts
 RUN composer install \
     --no-dev \
     --optimize-autoloader \
@@ -39,12 +39,15 @@ RUN composer install \
     --prefer-dist \
     --no-scripts
 
-# Run post-install scripts separately
+# Now copy the rest of the application
+COPY . .
+
+# Run composer scripts after all files are in place
 RUN composer run-script post-autoload-dump --no-interaction || true
 
 # Create necessary directories
 RUN mkdir -p /var/www/storage/app/public/media/{articles,certificates,cv,education,experiences,icons,products,profile,projects,seo,social-icons,tool-icons} \
-    && mkdir -p /var/www/storage/framework/{cache,sessions,views} \
+    && mkdir -p /var/www/storage/framework/{cache/data,sessions,views} \
     && mkdir -p /var/www/storage/logs \
     && mkdir -p /var/www/bootstrap/cache
 
@@ -60,6 +63,9 @@ COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/startup.sh /usr/local/bin/startup.sh
 
 RUN chmod +x /usr/local/bin/startup.sh
+
+# Create a minimal .env file for Docker build
+RUN echo "APP_KEY=" > /var/www/.env
 
 EXPOSE 8080
 

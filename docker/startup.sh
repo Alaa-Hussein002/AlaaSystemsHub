@@ -8,101 +8,68 @@ echo "================================================"
 if [ -z "$APP_KEY" ]; then
     echo "🔑 Generating application key..."
     php artisan key:generate --force --no-interaction
-    echo "✅ APP_KEY generated"
 fi
 
 # Verify SSL certificate
 if [ -f "/var/www/ssl/aiven-ca.pem" ]; then
-    echo "🔒 SSL Certificate found"
-    echo "   Size: $(wc -c < /var/www/ssl/aiven-ca.pem) bytes"
+    echo "🔒 SSL Certificate found ($(wc -c < /var/www/ssl/aiven-ca.pem) bytes)"
 else
-    echo "⚠️  SSL Certificate not found at /var/www/ssl/aiven-ca.pem"
+    echo "⚠️  SSL Certificate not found!"
+    exit 1
 fi
 
-# Wait for database with detailed logging
-echo "⏳ Waiting for database connection..."
+# Display connection info
+echo "📊 Database Configuration:"
 echo "   Host: $DB_HOST"
 echo "   Port: $DB_PORT"
 echo "   Database: $DB_DATABASE"
 echo "   Username: $DB_USERNAME"
+echo "   SSL CA: $MYSQL_ATTR_SSL_CA"
 
-RETRIES=30
-until php artisan db:show 2>&1 | grep -q "mysql" || [ $RETRIES -eq 0 ]; do
-    echo "   Attempt $((31-RETRIES))/30..."
-    RETRIES=$((RETRIES-1))
-    sleep 3
-done
-
-if [ $RETRIES -eq 0 ]; then
-    echo "❌ Could not connect to database after 90 seconds"
-    echo "📋 Attempting direct connection test..."
-    php artisan tinker --execute="try { DB::connection()->getPdo(); echo 'Connected!'; } catch (\Exception \$e) { echo 'Error: ' . \$e->getMessage(); }"
+# Test database connection with detailed error
+echo "⏳ Testing database connection..."
+if ! php artisan tinker --execute="
+try {
+    \$pdo = DB::connection()->getPdo();
+    echo '✅ Connected to MySQL successfully!' . PHP_EOL;
+    \$version = DB::select('SELECT VERSION() as v')[0]->v;
+    echo '📊 MySQL Version: ' . \$version . PHP_EOL;
+    \$ssl = DB::select(\"SHOW STATUS LIKE 'Ssl_cipher'\")[0]->Value ?? 'None';
+    echo '🔒 SSL Cipher: ' . \$ssl . PHP_EOL;
+} catch (\Exception \$e) {
+    echo '❌ Connection failed!' . PHP_EOL;
+    echo 'Error: ' . \$e->getMessage() . PHP_EOL;
+    exit(1);
+}
+" 2>&1; then
+    echo "❌ Database connection test failed!"
     exit 1
 fi
-
-echo "✅ Database connected!"
-
-# Test SSL connection
-echo "🔐 Testing SSL connection..."
-php artisan tinker --execute="
-    try {
-        \$pdo = DB::connection()->getPdo();
-        \$ssl = DB::select(\"SHOW STATUS LIKE 'Ssl_cipher'\")[0]->Value ?? 'None';
-        echo \"SSL Cipher: \" . \$ssl . PHP_EOL;
-    } catch (\Exception \$e) {
-        echo \"SSL Test Error: \" . \$e->getMessage() . PHP_EOL;
-    }
-" 2>&1 | tail -n 1
 
 # Run migrations
 echo "🗄️  Running migrations..."
-if php artisan migrate --force --no-interaction; then
-    echo "✅ Migrations completed successfully"
-else
-    echo "❌ Migration failed!"
-    exit 1
-fi
+php artisan migrate --force --no-interaction
 
-# Seed if needed
-echo "🌱 Checking database seed status..."
-ROLES_COUNT=$(php artisan tinker --execute="echo \App\Models\Role::count();" 2>/dev/null | tail -n 1 || echo "0")
-
-if [ "$ROLES_COUNT" = "0" ] || [ -z "$ROLES_COUNT" ]; then
+# Seed database
+ROLES_COUNT=$(php artisan tinker --execute="echo App\Models\Role::count();" 2>/dev/null | tail -n 1 || echo "0")
+if [ "$ROLES_COUNT" = "0" ]; then
     echo "🌱 Seeding database..."
-    php artisan db:seed --force --class=RoleSeeder --no-interaction
-    php artisan db:seed --force --class=AdminUserSeeder --no-interaction
-    php artisan db:seed --force --class=PersonalProfileSeeder --no-interaction
-    echo "✅ Database seeded"
-else
-    echo "✅ Database already seeded (Roles: $ROLES_COUNT)"
+    php artisan db:seed --force --class=RoleSeeder
+    php artisan db:seed --force --class=AdminUserSeeder
+    php artisan db:seed --force --class=PersonalProfileSeeder
 fi
 
-# Create storage link
-echo "🔗 Creating storage link..."
-php artisan storage:link --force 2>&1 || echo "   Storage link already exists"
+# Storage link
+php artisan storage:link --force || true
 
-# Clear caches
-echo "🧹 Clearing caches..."
-php artisan cache:clear --no-interaction 2>&1 || true
-php artisan config:clear --no-interaction 2>&1 || true
-php artisan route:clear --no-interaction 2>&1 || true
-php artisan view:clear --no-interaction 2>&1 || true
-
-# Cache for production
-echo "💾 Caching configuration..."
-php artisan config:cache --no-interaction
-php artisan route:cache --no-interaction
-php artisan view:cache --no-interaction
-
-# Optimize
-echo "⚡ Optimizing application..."
-php artisan optimize --no-interaction
+# Cache
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan optimize
 
 echo "================================================"
-echo "✅ Setup complete!"
-echo "🌐 Application ready at: $APP_URL"
-echo "📊 Environment: $APP_ENV"
+echo "✅ Application ready!"
 echo "================================================"
 
-# Start supervisor
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
