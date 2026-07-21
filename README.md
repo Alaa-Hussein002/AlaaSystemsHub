@@ -62,6 +62,7 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 
 ```
 AlaaSystemsHub
+├─ .dockerignore
 ├─ .editorconfig
 ├─ app
 │  ├─ Exceptions
@@ -120,6 +121,7 @@ AlaaSystemsHub
 │  │  │  │  └─ Public
 │  │  │  │     └─ ArticleController.php
 │  │  │  └─ Controller.php
+│  │  ├─ Kernel.php
 │  │  ├─ Middleware
 │  │  │  ├─ AdminOnly.php
 │  │  │  ├─ CheckPermission.php
@@ -265,6 +267,12 @@ AlaaSystemsHub
 │     ├─ DatabaseSeeder.php
 │     ├─ PersonalProfileSeeder.php
 │     └─ RoleSeeder.php
+├─ docker
+│  ├─ default.conf
+│  ├─ nginx.conf
+│  ├─ startup.sh
+│  └─ supervisord.conf
+├─ Dockerfile
 ├─ package-lock.json
 ├─ package.json
 ├─ phpunit.xml
@@ -274,6 +282,7 @@ AlaaSystemsHub
 │  ├─ index.php
 │  └─ robots.txt
 ├─ README.md
+├─ render.yaml
 ├─ resources
 │  ├─ css
 │  │  └─ app.css
@@ -289,6 +298,8 @@ AlaaSystemsHub
 │  ├─ api.php
 │  ├─ console.php
 │  └─ web.php
+├─ ssl
+│  └─ aiven-ca.pem
 ├─ storage
 │  ├─ app
 │  │  ├─ private

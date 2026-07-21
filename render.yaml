@@ -1,21 +1,59 @@
-# render.yaml
 services:
   - type: web
-    name: alaa-systems-hub
+    name: alaa-systems-hub-api
     env: docker
+    region: frankfurt
     plan: free
-    region: frankfurt # أو singapore حسب موقعك
-    dockerfilePath: ./Dockerfile
+    branch: main
+    healthCheckPath: /api/health
     envVars:
       - key: APP_NAME
-        value: "Alaa Systems Hub"
+        value: Alaa Systems Hub
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
         value: false
+      - key: APP_URL
+        sync: false
       - key: APP_KEY
         generateValue: true
-      - key: LOG_CHANNEL
-        value: stderr
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        value: alaa-mysql-alaa-hussein002-a.aivencloud.com
+      - key: DB_PORT
+        value: 14160
+      - key: DB_DATABASE
+        value: defaultdb
+      - key: DB_USERNAME
+        value: avnadmin
+      - key: DB_PASSWORD
+        sync: false
+      - key: MYSQL_ATTR_SSL_CA
+        value: /var/www/ssl/aiven-ca.pem
+      - key: MYSQL_ATTR_SSL_VERIFY_SERVER_CERT
+        value: false
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
       - key: LOG_LEVEL
         value: error
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: 587
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_ENCRYPTION
+        value: tls
+      - key: MAIL_FROM_ADDRESS
+        sync: false
+      - key: MAIL_FROM_NAME
+        value: Alaa Systems

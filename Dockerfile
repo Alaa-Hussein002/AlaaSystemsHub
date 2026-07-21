@@ -11,7 +11,8 @@ RUN apk add --no-cache \
     mysql-client \
     nginx \
     supervisor \
-    ca-certificates
+    ca-certificates \
+    openssl
 
 # Install PHP extensions
 RUN docker-php-ext-install pdo_mysql zip exif pcntl bcmath gd
@@ -25,6 +26,10 @@ WORKDIR /var/www
 # Copy application files
 COPY . .
 
+# Copy SSL certificate for Aiven
+RUN mkdir -p /var/www/ssl
+COPY ssl/aiven-ca.pem /var/www/ssl/
+
 # Install dependencies with increased timeout
 RUN composer install \
     --no-dev \
@@ -37,10 +42,16 @@ RUN composer install \
 # Run post-install scripts separately
 RUN composer run-script post-autoload-dump --no-interaction || true
 
+# Create necessary directories
+RUN mkdir -p /var/www/storage/app/public/media/{articles,certificates,cv,education,experiences,icons,products,profile,projects,seo,social-icons,tool-icons} \
+    && mkdir -p /var/www/storage/framework/{cache,sessions,views} \
+    && mkdir -p /var/www/storage/logs \
+    && mkdir -p /var/www/bootstrap/cache
+
 # Set permissions
 RUN chown -R www-data:www-data /var/www \
-    && chmod -R 755 /var/www/storage \
-    && chmod -R 755 /var/www/bootstrap/cache
+    && chmod -R 775 /var/www/storage \
+    && chmod -R 775 /var/www/bootstrap/cache
 
 # Copy configs
 COPY docker/nginx.conf /etc/nginx/nginx.conf
