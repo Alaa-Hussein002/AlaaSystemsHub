@@ -19,6 +19,8 @@ DB_PORT="${DB_PORT}"
 DB_DATABASE="${DB_DATABASE}"
 DB_USERNAME="${DB_USERNAME}"
 DB_PASSWORD="${DB_PASSWORD}"
+DB_CHARSET=utf8mb4
+DB_COLLATION=utf8mb4_unicode_ci
 
 MYSQL_ATTR_SSL_CA="${MYSQL_ATTR_SSL_CA}"
 MYSQL_ATTR_SSL_VERIFY_SERVER_CERT="${MYSQL_ATTR_SSL_VERIFY_SERVER_CERT}"
@@ -89,29 +91,42 @@ MAX_RETRIES=10
 RETRY=0
 
 while [ $RETRY -lt $MAX_RETRIES ]; do
-    DB_TEST=$(php artisan tinker --execute="
+    # اختبار بسيط بدون tinker
+    DB_TEST=$(php -r "
+        require '/var/www/vendor/autoload.php';
+        \$app = require_once '/var/www/bootstrap/app.php';
+        \$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
+        
         try {
             \$pdo = DB::connection()->getPdo();
-            echo 'SUCCESS';
-        } catch (\Exception \$e) {
-            echo 'ERROR: ' . \$e->getMessage();
+            \$version = \$pdo->query('SELECT VERSION()')->fetchColumn();
+            echo 'SUCCESS|' . \$version;
+        } catch (Exception \$e) {
+            echo 'ERROR|' . \$e->getMessage();
         }
     " 2>&1)
     
     if echo "$DB_TEST" | grep -q "SUCCESS"; then
+        VERSION=$(echo "$DB_TEST" | cut -d'|' -f2)
         echo "✅ Database connected successfully!"
+        echo "📊 MySQL Version: $VERSION"
         
-        # Show database info
-        php artisan tinker --execute="
+        # عرض معلومات إضافية
+        php -r "
+            require '/var/www/vendor/autoload.php';
+            \$app = require_once '/var/www/bootstrap/app.php';
+            \$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
+            
             try {
                 \$db = DB::connection()->getDatabaseName();
                 \$host = DB::connection()->getConfig('host');
                 \$port = DB::connection()->getConfig('port');
                 echo '📊 Connected to: ' . \$db . ' at ' . \$host . ':' . \$port . PHP_EOL;
                 
-                \$version = DB::select('SELECT VERSION() as v')[0]->v ?? 'Unknown';
-                echo '📊 MySQL Version: ' . \$version . PHP_EOL;
-            } catch (\Exception \$e) {
+                // عدد الجداول
+                \$tables = DB::select('SHOW TABLES');
+                echo '📊 Tables count: ' . count(\$tables) . PHP_EOL;
+            } catch (Exception \$e) {
                 echo 'Info error: ' . \$e->getMessage() . PHP_EOL;
             }
         " 2>/dev/null || true
@@ -119,9 +134,11 @@ while [ $RETRY -lt $MAX_RETRIES ]; do
         break
     else
         RETRY=$((RETRY + 1))
+        ERROR_MSG=$(echo "$DB_TEST" | cut -d'|' -f2)
+        
         if [ $RETRY -lt $MAX_RETRIES ]; then
             echo "   ❌ Attempt $RETRY/$MAX_RETRIES failed"
-            echo "   Error: $DB_TEST"
+            echo "   Error: $ERROR_MSG"
             echo "   Retrying in 3 seconds..."
             sleep 3
         else
@@ -129,10 +146,36 @@ while [ $RETRY -lt $MAX_RETRIES ]; do
             echo "================================================"
             echo "❌ DATABASE CONNECTION FAILED"
             echo "================================================"
-            echo "Error details: $DB_TEST"
+            echo "Error details: $ERROR_MSG"
             echo ""
             echo "🔍 Config from .env file:"
             grep "^DB_" /var/www/.env || echo "No DB_ variables in .env"
+            echo ""
+            echo "🔍 Testing basic PDO connection..."
+            php -r "
+                try {
+                    \$host = getenv('DB_HOST');
+                    \$port = getenv('DB_PORT');
+                    \$db = getenv('DB_DATABASE');
+                    \$user = getenv('DB_USERNAME');
+                    \$pass = getenv('DB_PASSWORD');
+                    \$ssl = getenv('MYSQL_ATTR_SSL_CA');
+                    
+                    \$dsn = \"mysql:host=\$host;port=\$port;dbname=\$db;charset=utf8mb4\";
+                    \$options = [
+                        PDO::MYSQL_ATTR_SSL_CA => \$ssl,
+                        PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
+                    ];
+                    
+                    \$pdo = new PDO(\$dsn, \$user, \$pass, \$options);
+                    echo 'Direct PDO connection: SUCCESS' . PHP_EOL;
+                    
+                    \$stmt = \$pdo->query('SELECT VERSION()');
+                    echo 'MySQL Version: ' . \$stmt->fetchColumn() . PHP_EOL;
+                } catch (Exception \$e) {
+                    echo 'Direct PDO Error: ' . \$e->getMessage() . PHP_EOL;
+                }
+            "
             echo ""
             exit 1
         fi
