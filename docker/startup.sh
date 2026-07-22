@@ -4,6 +4,42 @@ set -e
 echo "🚀 Starting Alaa Systems Hub API..."
 echo "================================================"
 
+# ✅ إنشاء .env من متغيرات البيئة
+echo "📝 Creating .env from environment variables..."
+cat > /var/www/.env << EOF
+APP_NAME="${APP_NAME}"
+APP_ENV="${APP_ENV}"
+APP_KEY="${APP_KEY}"
+APP_DEBUG="${APP_DEBUG}"
+APP_URL="${APP_URL}"
+
+DB_CONNECTION="${DB_CONNECTION}"
+DB_HOST="${DB_HOST}"
+DB_PORT="${DB_PORT}"
+DB_DATABASE="${DB_DATABASE}"
+DB_USERNAME="${DB_USERNAME}"
+DB_PASSWORD="${DB_PASSWORD}"
+
+MYSQL_ATTR_SSL_CA="${MYSQL_ATTR_SSL_CA}"
+MYSQL_ATTR_SSL_VERIFY_SERVER_CERT="${MYSQL_ATTR_SSL_VERIFY_SERVER_CERT}"
+
+SESSION_DRIVER="${SESSION_DRIVER}"
+CACHE_STORE="${CACHE_STORE}"
+QUEUE_CONNECTION="${QUEUE_CONNECTION}"
+
+MAIL_MAILER="${MAIL_MAILER}"
+MAIL_HOST="${MAIL_HOST}"
+MAIL_PORT="${MAIL_PORT}"
+MAIL_USERNAME="${MAIL_USERNAME}"
+MAIL_PASSWORD="${MAIL_PASSWORD}"
+MAIL_ENCRYPTION="${MAIL_ENCRYPTION}"
+MAIL_FROM_ADDRESS="${MAIL_FROM_ADDRESS}"
+MAIL_FROM_NAME="${MAIL_FROM_NAME}"
+EOF
+
+chmod 644 /var/www/.env
+echo "✅ .env file created"
+
 # Laravel version
 echo "📦 Laravel Version:"
 php artisan --version 2>/dev/null || echo "⚠️  Laravel not ready"
@@ -12,6 +48,8 @@ php artisan --version 2>/dev/null || echo "⚠️  Laravel not ready"
 if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:" ]; then
     echo "🔑 Generating APP_KEY..."
     php artisan key:generate --force --no-interaction
+    # تحديث المتغير
+    export APP_KEY=$(grep APP_KEY /var/www/.env | cut -d '=' -f2)
 fi
 
 # SSL Certificate check
@@ -30,22 +68,27 @@ echo "   Database: ${DB_DATABASE:-not set}"
 echo "   Username: ${DB_USERNAME:-not set}"
 echo "   SSL CA: ${MYSQL_ATTR_SSL_CA:-not set}"
 
+# التحقق من وجود المتغيرات المطلوبة
+if [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ] || [ -z "$DB_DATABASE" ]; then
+    echo "❌ ERROR: Missing required database environment variables!"
+    echo "   Please set DB_HOST, DB_PORT, DB_DATABASE in Render dashboard"
+    exit 1
+fi
+
 # Clear all caches BEFORE connecting to DB
 echo "🧹 Clearing ALL caches..."
 rm -rf /var/www/bootstrap/cache/*.php
 php artisan config:clear 2>/dev/null || true
-php artisan cache:clear 2>/dev/null || true
 php artisan route:clear 2>/dev/null || true
 php artisan view:clear 2>/dev/null || true
 
 # Test database connection with detailed error
 echo "⏳ Testing database connection..."
 
-MAX_RETRIES=15
+MAX_RETRIES=10
 RETRY=0
 
 while [ $RETRY -lt $MAX_RETRIES ]; do
-    # Test using tinker for better error messages
     DB_TEST=$(php artisan tinker --execute="
         try {
             \$pdo = DB::connection()->getPdo();
@@ -68,9 +111,6 @@ while [ $RETRY -lt $MAX_RETRIES ]; do
                 
                 \$version = DB::select('SELECT VERSION() as v')[0]->v ?? 'Unknown';
                 echo '📊 MySQL Version: ' . \$version . PHP_EOL;
-                
-                \$tables = DB::select('SHOW TABLES');
-                echo '📊 Tables count: ' . count(\$tables) . PHP_EOL;
             } catch (\Exception \$e) {
                 echo 'Info error: ' . \$e->getMessage() . PHP_EOL;
             }
@@ -82,8 +122,8 @@ while [ $RETRY -lt $MAX_RETRIES ]; do
         if [ $RETRY -lt $MAX_RETRIES ]; then
             echo "   ❌ Attempt $RETRY/$MAX_RETRIES failed"
             echo "   Error: $DB_TEST"
-            echo "   Retrying in 5 seconds..."
-            sleep 5
+            echo "   Retrying in 3 seconds..."
+            sleep 3
         else
             echo ""
             echo "================================================"
@@ -91,19 +131,9 @@ while [ $RETRY -lt $MAX_RETRIES ]; do
             echo "================================================"
             echo "Error details: $DB_TEST"
             echo ""
-            echo "🔍 Environment check:"
-            echo "   DB_HOST = ${DB_HOST:-NOT SET}"
-            echo "   DB_PORT = ${DB_PORT:-NOT SET}"
-            echo "   DB_DATABASE = ${DB_DATABASE:-NOT SET}"
-            echo "   DB_USERNAME = ${DB_USERNAME:-NOT SET}"
-            echo "   SSL CA exists = $([ -f "$MYSQL_ATTR_SSL_CA" ] && echo YES || echo NO)"
+            echo "🔍 Config from .env file:"
+            grep "^DB_" /var/www/.env || echo "No DB_ variables in .env"
             echo ""
-            echo "🔍 DNS Resolution:"
-            nslookup $DB_HOST 2>&1 || echo "DNS lookup failed"
-            echo ""
-            echo "🔍 Port connectivity:"
-            nc -zv $DB_HOST $DB_PORT 2>&1 || echo "Port not reachable"
-            echo "================================================"
             exit 1
         fi
     fi

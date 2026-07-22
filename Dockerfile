@@ -66,8 +66,7 @@ COPY docker/startup.sh /usr/local/bin/startup.sh
 
 RUN chmod +x /usr/local/bin/startup.sh
 
-# Create a minimal .env file for Docker build
-RUN echo "APP_KEY=" > /var/www/.env
+
 
 EXPOSE 8080
 
