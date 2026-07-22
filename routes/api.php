@@ -4,6 +4,8 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use App\Models\PersonalProfile;
+use Illuminate\Support\Facades\Auth;
 
 // ========================================
 // Controllers - Auth & Health
@@ -126,6 +128,66 @@ Route::get('/test-ssl', function() {
     }
 });
 
+// ✅ فحص بدون middleware
+Route::get('/test-profile-direct', function () {
+    try {
+        $profile = PersonalProfile::first();
+        
+        return response()->json([
+            'status' => 'success',
+            'profile_exists' => $profile !== null,
+            'profile_data' => $profile,
+            'model_path' => PersonalProfile::class,
+            'resource_exists' => class_exists('App\Http\Resources\ProfileResource'),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+        ], 500);
+    }
+});
+
+// ✅ فحص مع middleware
+Route::middleware(['auth:sanctum'])->get('/test-profile-auth', function () {
+    try {
+        $user = Auth::user();
+        $profile = PersonalProfile::first();
+        
+        return response()->json([
+            'status' => 'success',
+            'authenticated' => true,
+            'user_id' => $user->id,
+            'user_role' => $user->role ?? null,
+            'profile_exists' => $profile !== null,
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+        ], 500);
+    }
+});
+
+// ✅ فحص Controller نفسه
+Route::middleware(['auth:sanctum'])->get('/test-controller', function () {
+    try {
+        $controller = new AdminProfileController();
+        return response()->json([
+            'status' => 'success',
+            'controller_exists' => true,
+            'methods' => get_class_methods($controller),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+        ], 500);
+    }
+});
 // ========================================
 // 🔐 Auth Routes
 // ========================================
