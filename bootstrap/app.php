@@ -12,7 +12,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // احذف أي CORS middleware من هنا
+        // ✅ Sanctum Middleware للـ API
+        $middleware->api(prepend: [
+            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+        ]);
+
+        // ✅ استثناء مسارات API من CSRF (Sanctum يتولى الحماية)
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+        ]);
+
+        // ✅ السماح بالـ Stateful API من Frontend
         $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions) {
