@@ -111,46 +111,36 @@ Route::get('/check-data', function() {
     }
 });
 
-Route::get('/test-ssl', function() {
-    try {
-        $ssl = DB::select("SHOW STATUS LIKE 'Ssl_cipher'");
-        $version = DB::select('SELECT VERSION() as version')[0]->version;
-        
-        return response()->json([
-            'mysql_version' => $version,
-            'ssl_status' => $ssl[0]->Value ?? 'Not using SSL',
-            'connection' => 'OK',
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'error' => $e->getMessage()
-        ], 500);
-    }
-});
+// ========================================
+// 🔐 Auth Routes
+// ========================================
 
-// ✅ فحص بدون middleware
-Route::get('/test-profile-direct', function () {
-    try {
-        $profile = PersonalProfile::first();
-        
-        return response()->json([
-            'status' => 'success',
-            'profile_exists' => $profile !== null,
-            'profile_data' => $profile,
-            'model_path' => PersonalProfile::class,
-            'resource_exists' => class_exists('App\Http\Resources\ProfileResource'),
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine(),
-            'trace' => $e->getTraceAsString(),
-        ], 500);
-    }
-});
+Route::prefix('auth')->group(function () {
+    
+    // ===== Public Routes - مسارات عامة =====
+    Route::post('/login', [AuthController::class, 'login']);
+    
+    // CUSTOMER_FEATURE: Register temporarily disabled
+    // Route::post('/register', [AuthController::class, 'register']);
+    
+    // Password Reset Routes - مسارات إعادة تعيين كلمة المرور
+    Route::prefix('password')->group(function () {
+        Route::post('/forgot', [PasswordResetController::class, 'forgotPassword']);
+        Route::post('/verify-otp', [PasswordResetController::class, 'verifyOtp']);
+        Route::post('/reset', [PasswordResetController::class, 'resetPassword']);
+        Route::post('/resend-otp', [PasswordResetController::class, 'resendOtp']);
+    });
 
+    // ===== Protected Routes - مسارات محمية =====
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/me', [AuthController::class, 'me']);
+        Route::get('/check', [AuthController::class, 'checkAuth']);
+        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::post('/logout-all', [AuthController::class, 'logoutAll']);
+        Route::put('/profile', [AuthController::class, 'updateProfile']);
+        Route::put('/change-password', [AuthController::class, 'changePassword']);
+    });
+});
 
 // ========================================
 // 🌐 Public/Guest Routes
