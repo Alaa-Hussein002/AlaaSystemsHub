@@ -209,6 +209,11 @@ AlaaSystemsHub
 ├─ composer.json
 ├─ composer.lock
 ├─ config
+│  ├─ cors.php
+│  ├─ database.php
+│  ├─ mail.php
+│  └─ sanctum.php
+├─ config.backup
 │  ├─ app.php
 │  ├─ auth.php
 │  ├─ cache.php
@@ -261,7 +266,8 @@ AlaaSystemsHub
 │  │  ├─ 2026_07_15_054538_create_cache_table.php
 │  │  ├─ 2026_07_15_091733_create_personal_access_tokens_table.php
 │  │  ├─ 2026_07_18_072756_create_password_reset_tokens_table.php
-│  │  └─ 2026_07_18_072903_create_login_attempts_table.php
+│  │  ├─ 2026_07_18_072903_create_login_attempts_table.php
+│  │  └─ 2026_07_22_082133_create_personal_access_tokens_table.php
 │  └─ seeders
 │     ├─ AdminUserSeeder.php
 │     ├─ DatabaseSeeder.php
@@ -540,6 +546,7 @@ AlaaSystemsHub
 │  │     ├─ 3ed9da2b036fc3998bab6e4609d8e41e.php
 │  │     └─ b159ae556812ab908fe7ad0f64206ca6.php
 │  └─ logs
+├─ test-db-connection.php
 ├─ tests
 │  ├─ Feature
 │  │  └─ ExampleTest.php
