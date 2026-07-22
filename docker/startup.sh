@@ -184,24 +184,22 @@ done
 
 # Run migrations
 echo "🗄️  Running migrations..."
-# Run migrations
-echo "🗄️  Checking migrations..."
 
-# محاولة تشغيل migrations
-MIGRATE_OUTPUT=$(php artisan migrate --force --no-interaction 2>&1)
-MIGRATE_EXIT=$?
-
-if [ $MIGRATE_EXIT -eq 0 ]; then
+# محاولة تشغيل migrations وتجاهل أخطاء الجداول الموجودة
+if php artisan migrate --force --no-interaction 2>&1 | tee /tmp/migrate.log; then
     echo "✅ Migrations completed successfully"
-elif echo "$MIGRATE_OUTPUT" | grep -q "already exists"; then
-    echo "⚠️  Tables already exist - skipping migration errors"
-    echo "📊 Current migration status:"
-    php artisan migrate:status 2>/dev/null || true
-    echo "✅ Continuing deployment..."
 else
-    echo "❌ Migration failed with unexpected error:"
-    echo "$MIGRATE_OUTPUT"
-    exit 1
+    # التحقق من نوع الخطأ
+    if grep -q "already exists" /tmp/migrate.log; then
+        echo "⚠️  Some tables already exist - this is normal for existing database"
+        echo "📊 Migration status:"
+        php artisan migrate:status 2>/dev/null | head -15 || true
+        echo "✅ Continuing deployment despite table existence warnings..."
+    else
+        echo "❌ Migration failed with unexpected error:"
+        cat /tmp/migrate.log
+        exit 1
+    fi
 fi
 
 # Seed database (only if needed)
