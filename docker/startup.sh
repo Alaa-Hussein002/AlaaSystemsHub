@@ -184,7 +184,25 @@ done
 
 # Run migrations
 echo "🗄️  Running migrations..."
-php artisan migrate --force --no-interaction
+# Run migrations
+echo "🗄️  Checking migrations..."
+
+# محاولة تشغيل migrations
+MIGRATE_OUTPUT=$(php artisan migrate --force --no-interaction 2>&1)
+MIGRATE_EXIT=$?
+
+if [ $MIGRATE_EXIT -eq 0 ]; then
+    echo "✅ Migrations completed successfully"
+elif echo "$MIGRATE_OUTPUT" | grep -q "already exists"; then
+    echo "⚠️  Tables already exist - skipping migration errors"
+    echo "📊 Current migration status:"
+    php artisan migrate:status 2>/dev/null || true
+    echo "✅ Continuing deployment..."
+else
+    echo "❌ Migration failed with unexpected error:"
+    echo "$MIGRATE_OUTPUT"
+    exit 1
+fi
 
 # Seed database (only if needed)
 echo "🌱 Checking seeders..."
