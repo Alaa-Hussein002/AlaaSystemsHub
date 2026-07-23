@@ -26,87 +26,79 @@ class ProfileController extends Controller
     //     return $this->success(new ProfileResource($profile));
     // }
 
-        public function update(Request $request)
-    {
-        // ✅ Log كل البيانات الواردة
-        Log::info('Profile update request received', [
-            'data' => $request->except(['photo', 'cv_file']),
-            'has_photo' => $request->hasFile('photo'),
-            'has_cv' => $request->hasFile('cv_file'),
-        ]);
+    public function update(Request $request)
+{
+    try {
+        $profile = PersonalProfile::first();
 
-        try {
-            // ✅ بدء Transaction
-            DB::beginTransaction();
-
-            $profile = PersonalProfile::first();
-
-            if ($profile) {
-                Log::info('Updating existing profile', ['id' => $profile->id]);
-                
-                // ✅ تحديث البيانات
-                $updated = $profile->update($request->all());
-                
-                Log::info('Update result', [
-                    'updated' => $updated,
-                    'profile_id' => $profile->id,
-                ]);
-                
-                // ✅ تحديث timestamp
-                $profile->touch();
-                
-                // ✅ إعادة تحميل
-                $profile->refresh();
-                
-            } else {
-                Log::info('Creating new profile');
-                $profile = PersonalProfile::create($request->all());
-            }
-
-            // ✅ مسح الـ cache
-            Cache::forget('personal_profile');
-            Cache::forget('public_profile');
-
-            // ✅ تسجيل النشاط
-            ActivityLog::log('update', 'profile', 'تم تحديث الملف الشخصي');
-
-            // ✅ Commit Transaction
-            DB::commit();
-
-            Log::info('Profile updated successfully', [
-                'id' => $profile->id,
-                'full_name' => $profile->full_name,
-            ]);
-
-            return $this->success(
-                new ProfileResource($profile), 
-                'تم تحديث الملف الشخصي بنجاح'
-            );
-            
-        } catch (\Illuminate\Database\QueryException $e) {
-            DB::rollBack();
-            
-            Log::error('Database query error in profile update', [
-                'error' => $e->getMessage(),
-                'sql' => $e->getSql(),
-                'bindings' => $e->getBindings(),
-            ]);
-            
-            return $this->error('خطأ في قاعدة البيانات: ' . $e->getMessage(), 500);
-            
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            Log::error('Profile update failed', [
-                'error' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            
-            return $this->error('فشل تحديث الملف الشخصي: ' . $e->getMessage(), 500);
+        if (!$profile) {
+            $profile = new PersonalProfile();
         }
+
+        // ✅ تنظيف البيانات قبل الحفظ
+        $data = $request->all();
+        
+        // تنظيف highlights
+        if (isset($data['highlights'])) {
+            $data['highlights'] = collect($data['highlights'])->map(function($item) {
+                if (isset($item['icon']) && str_contains($item['icon'], 'localhost')) {
+                    $item['icon'] = null;
+                }
+                return $item;
+            })->filter(function($item) {
+                return !empty($item['icon']);
+            })->values()->toArray();
+        }
+        
+        // تنظيف tools
+        if (isset($data['tools'])) {
+            $data['tools'] = collect($data['tools'])->map(function($item) {
+                if (isset($item['icon']) && str_contains($item['icon'], 'localhost')) {
+                    $item['icon'] = null;
+                }
+                return $item;
+            })->filter(function($item) {
+                return !empty($item['icon']);
+            })->values()->toArray();
+        }
+        
+        // تنظيف seo
+        if (isset($data['seo']['og_image']) && str_contains($data['seo']['og_image'], 'localhost')) {
+            $data['seo']['og_image'] = null;
+        }
+        
+        // تنظيف photo
+        if (isset($data['photo']) && str_contains($data['photo'], 'localhost')) {
+            unset($data['photo']);
+        }
+        
+        // تنظيف cv_file
+        if (isset($data['cv_file']) && str_contains($data['cv_file'], 'localhost')) {
+            unset($data['cv_file']);
+        }
+
+        $profile->fill($data);
+        $profile->save();
+
+        Cache::forget('personal_profile');
+        Cache::forget('public_profile');
+
+        ActivityLog::log('update', 'profile', 'تم تحديث الملف الشخصي');
+
+        return $this->success(
+            new ProfileResource($profile), 
+            'تم تحديث الملف الشخصي بنجاح'
+        );
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile(),
+        ], 500);
     }
+}
 
     public function show()
     {

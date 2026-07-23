@@ -214,6 +214,115 @@ Route::get('/live-logs', function() {
     ]);
 });
 
+Route::get('/clean-local-urls', function() {
+    try {
+        DB::beginTransaction();
+        
+        $profile = \App\Models\PersonalProfile::first();
+        
+        if ($profile) {
+            // ✅ تنظيف highlights
+            if ($profile->highlights) {
+                $highlights = collect($profile->highlights)->map(function($item) {
+                    if (isset($item['icon']) && str_contains($item['icon'], 'localhost')) {
+                        $item['icon'] = null; // أو احذف الـ highlight
+                    }
+                    return $item;
+                })->filter(function($item) {
+                    return $item['icon'] !== null; // احذف العناصر بدون أيقونات
+                })->values()->toArray();
+                
+                $profile->highlights = $highlights;
+            }
+            
+            // ✅ تنظيف tools
+            if ($profile->tools) {
+                $tools = collect($profile->tools)->map(function($item) {
+                    if (isset($item['icon']) && str_contains($item['icon'], 'localhost')) {
+                        $item['icon'] = null;
+                    }
+                    return $item;
+                })->filter(function($item) {
+                    return $item['icon'] !== null;
+                })->values()->toArray();
+                
+                $profile->tools = $tools;
+            }
+            
+            // ✅ تنظيف seo
+            if ($profile->seo && isset($profile->seo['og_image'])) {
+                if (str_contains($profile->seo['og_image'], 'localhost')) {
+                    $seo = $profile->seo;
+                    $seo['og_image'] = null;
+                    $profile->seo = $seo;
+                }
+            }
+            
+            // ✅ تنظيف photo
+            if ($profile->photo && str_contains($profile->photo, 'localhost')) {
+                $profile->photo = null;
+            }
+            
+            // ✅ تنظيف cv_file
+            if ($profile->cv_file && str_contains($profile->cv_file, 'localhost')) {
+                $profile->cv_file = null;
+            }
+            
+            $profile->save();
+            
+            DB::commit();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تنظيف الروابط المحلية',
+                'profile' => $profile,
+            ]);
+        }
+        
+        return response()->json(['error' => 'No profile found'], 404);
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        
+        return response()->json([
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+        ], 500);
+    }
+});
+
+Route::get('/reset-profile', function() {
+    try {
+        \App\Models\PersonalProfile::truncate();
+        
+        $profile = \App\Models\PersonalProfile::create([
+            'full_name' => ['ar' => 'علاء حسين', 'en' => 'Alaa Hussein'],
+            'bio' => ['ar' => 'مطور ويب', 'en' => 'Web Developer'],
+            'contact' => ['email' => 'ala.hussein002@gmail.com', 'phone' => '+967737131058'],
+            'social_links' => [],
+            'highlights' => [],
+            'available_for_hire' => true,
+            'availability_status' => 'available',
+            'seo' => ['type' => 'profile'],
+            'rotating_roles' => [],
+            'tech_display' => [],
+            'tools' => [],
+            'code_block_lines' => [],
+            'hero_greeting' => 'مرحباً',
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'تم إعادة تعيين الملف الشخصي',
+            'profile' => $profile,
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+});
 // ========================================
 // 🔐 Auth Routes
 // ========================================
