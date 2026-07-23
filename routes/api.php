@@ -197,6 +197,23 @@ Route::put('/test-profile-update', function(Request $request) {
     }
 });
 
+Route::get('/live-logs', function() {
+    $logFile = storage_path('logs/laravel.log');
+    
+    if (!file_exists($logFile)) {
+        return response()->json(['message' => 'No logs yet', 'file' => $logFile]);
+    }
+    
+    $logs = file($logFile);
+    $last50 = array_slice($logs, -50);
+    
+    return response()->json([
+        'total_lines' => count($logs),
+        'showing_last' => count($last50),
+        'logs' => $last50,
+    ]);
+});
+
 // ========================================
 // 🔐 Auth Routes
 // ========================================

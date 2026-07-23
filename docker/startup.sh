@@ -29,6 +29,10 @@ SESSION_DRIVER="${SESSION_DRIVER}"
 CACHE_STORE="${CACHE_STORE}"
 QUEUE_CONNECTION="${QUEUE_CONNECTION}"
 
+CLOUDINARY_CLOUD_NAME="${CLOUDINARY_CLOUD_NAME}"
+CLOUDINARY_API_KEY="${CLOUDINARY_API_KEY}"
+CLOUDINARY_API_SECRET="${CLOUDINARY_API_SECRET}"
+
 MAIL_MAILER="${MAIL_MAILER}"
 MAIL_HOST="${MAIL_HOST}"
 MAIL_PORT="${MAIL_PORT}"
@@ -76,6 +80,11 @@ if [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ] || [ -z "$DB_DATABASE" ]; then
     echo "   Please set DB_HOST, DB_PORT, DB_DATABASE in Render dashboard"
     exit 1
 fi
+
+# ✅ مسح اللوج القديم
+echo "🗑️  Clearing old logs..."
+rm -f /var/www/storage/logs/*.log
+echo "✅ Logs cleared"
 
 # Clear all caches BEFORE connecting to DB
 echo "🧹 Clearing ALL caches..."
@@ -203,11 +212,11 @@ else
     fi
 fi
 
-# Seed database (only if needed)
+# Seeders - ✅ استخدم updateOrCreate بدلاً من create
 echo "🌱 Checking seeders..."
-php artisan db:seed --force --class=RoleSeeder --no-interaction 2>/dev/null || echo "   ✓ Roles already exist"
-php artisan db:seed --force --class=AdminUserSeeder --no-interaction 2>/dev/null || echo "   ✓ Admin already exists"
-php artisan db:seed --force --class=PersonalProfileSeeder --no-interaction 2>/dev/null || echo "   ✓ Profile already exists"
+php artisan db:seed --force --class=RoleSeeder --no-interaction 2>/dev/null || echo "   ✓ Roles OK"
+php artisan db:seed --force --class=AdminUserSeeder --no-interaction 2>/dev/null || echo "   ✓ Admin OK"
+php artisan db:seed --force --class=PersonalProfileSeeder --no-interaction 2>/dev/null || echo "   ✓ Profile OK"
 
 # Storage link
 echo "🔗 Creating storage link..."
@@ -225,11 +234,8 @@ echo "   Environment: ${APP_ENV:-unknown}"
 echo "   Debug: ${APP_DEBUG:-false}"
 echo "================================================"
 # عرض آخر أخطاء Laravel
-echo "================================================"
-echo "📋 Laravel Logs (last 30 lines):"
-echo "================================================"
-tail -30 /var/www/storage/logs/laravel.log 2>/dev/null || echo "No logs yet"
-echo "================================================"
+# ✅ لا تعرض اللوج القديم - سيتم إنشاء جديد
+echo "📋 Logs will be written to: /var/www/storage/logs/laravel.log"
 
 # Start supervisor
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
