@@ -5,6 +5,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class PersonalProfile extends Model
 {
@@ -71,5 +72,26 @@ class PersonalProfile extends Model
     public function getWhatsApp()
     {
         return $this->contact['whatsapp'] ?? null;
+    }
+
+        // ✅ Event للتحقق من التحديث
+    protected static function booted()
+    {
+        static::updating(function ($profile) {
+            Log::info('Model updating event:', [
+                'id' => $profile->id,
+                'full_name_old' => $profile->getOriginal('full_name'),
+                'full_name_new' => $profile->full_name,
+                'changes' => $profile->getDirty(),
+            ]);
+        });
+
+        static::updated(function ($profile) {
+            Log::info('Model updated event:', [
+                'id' => $profile->id,
+                'full_name' => $profile->full_name,
+                'updated_at' => $profile->updated_at,
+            ]);
+        });
     }
 }

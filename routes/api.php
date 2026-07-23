@@ -123,6 +123,28 @@ Route::get('/debug-profile', function() {
     ]);
 });
 
+Route::get('/test-profile-debug', function() {
+    try {
+        $profile = \App\Models\PersonalProfile::first();
+        
+        if (!$profile) {
+            return response()->json(['error' => 'No profile found']);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'profile' => $profile->toArray(),
+            'updated_at' => $profile->updated_at?->toDateTimeString(),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ], 500);
+    }
+});
+
 // ========================================
 // 🔐 Auth Routes
 // ========================================
