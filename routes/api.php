@@ -64,52 +64,53 @@ use App\Http\Controllers\Api\Public\ArticleController as PublicArticleController
 // 🏥 Health Check
 // ========================================
 
-Route::get('/health', function() {
-    try {
-        DB::connection()->getPdo();
-        $connected = true;
-        $error = null;
-    } catch (\Exception $e) {
-        $connected = false;
-        $error = $e->getMessage();
-    }
+// Route::get('/health', function() {
+//     try {
+//         DB::connection()->getPdo();
+//         $connected = true;
+//         $error = null;
+//     } catch (\Exception $e) {
+//         $connected = false;
+//         $error = $e->getMessage();
+//     }
     
-    return response()->json([
-        'status' => 'ok',
-        'database' => $connected ? 'connected' : 'disconnected',
-        'db_error' => $error,
-        'env' => [
-            'APP_ENV' => config('app.env'),
-            'DB_HOST' => config('database.connections.mysql.host'),
-            'DB_PORT' => config('database.connections.mysql.port'),
-            'DB_DATABASE' => config('database.connections.mysql.database'),
-        ],
-        'timestamp' => now()->toISOString(),
-    ]);
-});
+//     return response()->json([
+//         'status' => 'ok',
+//         'database' => $connected ? 'connected' : 'disconnected',
+//         'db_error' => $error,
+//         'env' => [
+//             'APP_ENV' => config('app.env'),
+//             'DB_HOST' => config('database.connections.mysql.host'),
+//             'DB_PORT' => config('database.connections.mysql.port'),
+//             'DB_DATABASE' => config('database.connections.mysql.database'),
+//         ],
+//         'timestamp' => now()->toISOString(),
+//     ]);
+// });
 
 // Check data endpoint
-Route::get('/check-data', function() {
-    try {
-        $tables = DB::select('SHOW TABLES');
-        $users = DB::table('users')->count();
+// Route::get('/check-data', function() {
+//     try {
+//         $tables = DB::select('SHOW TABLES');
+//         $users = DB::table('users')->count();
         
-        return response()->json([
-            'status' => 'success',
-            'tables_count' => count($tables),
-            'users_count' => $users,
-            'tables' => array_map(function($t) {
-                return array_values((array)$t)[0];
-            }, $tables)
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ], 500);
-    }
-});
+//         return response()->json([
+//             'status' => 'success',
+//             'tables_count' => count($tables),
+//             'users_count' => $users,
+//             'tables' => array_map(function($t) {
+//                 return array_values((array)$t)[0];
+//             }, $tables)
+//         ]);
+//     } catch (\Exception $e) {
+//         return response()->json([
+//             'status' => 'error',
+//             'message' => $e->getMessage(),
+//             'trace' => $e->getTraceAsString()
+//         ], 500);
+//     }
+// });
+
 
 // ========================================
 // 🔐 Auth Routes

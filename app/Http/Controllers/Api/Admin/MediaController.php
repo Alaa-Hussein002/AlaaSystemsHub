@@ -11,11 +11,27 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Cloudinary\Cloudinary;
 
 class MediaController extends Controller
 {
     use ApiResponse;
 
+    // protected $cloudinary;
+    // public function __construct()
+    // {
+    //     // ✅ إعداد Cloudinary يدوياً
+    //     $this->cloudinary = new Cloudinary([
+    //         'cloud' => [
+    //             'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+    //             'api_key'    => env('CLOUDINARY_API_KEY'),
+    //             'api_secret' => env('CLOUDINARY_API_SECRET'),
+    //         ],
+    //         'url' => [
+    //             'secure' => true
+    //         ]
+    //     ]);
+    // }
     public function index(Request $request)
     {
         $query = Media::orderBy('created_at', 'desc');
@@ -45,26 +61,64 @@ class MediaController extends Controller
             $folder = Str::slug($request->get('folder', 'general'));
             
             // ✅ توليد اسم فريد للملف
-            $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
+            // $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
+            // ✅ رفع إلى Cloudinary
+            // $uploadedFile = $file->storeOnCloudinary("media/{$folder}");
             
+            // ✅ الحصول على البيانات
+            // $fileUrl = $uploadedFile->getSecurePath(); // رابط HTTPS
+            // $publicId = $uploadedFile->getPublicId(); // معرّف الملف
+            // $filePath = $uploadedFile->getPath(); // المسار
+
             // ✅ حفظ الملف
-            $filePath = $file->storeAs("media/{$folder}", $fileName, 'public');
+            // $filePath = $file->storeAs("media/{$folder}", $fileName, 'public');
             
             // ✅ توليد الرابط الكامل
-            $fileUrl = Storage::url($filePath);
+            // $fileUrl = Storage::url($filePath);
+
+            // $uploadedFile = $this->cloudinary->uploadApi()->upload(
+            //     $file->getRealPath(),
+            //     [
+            //         'folder' => "media/{$folder}",
+            //         'resource_type' => 'auto', // صورة/فيديو/ملف تلقائياً
+            //         'public_id' => Str::random(40), // اسم فريد
+            //     ]
+            // );
             
+            // ✅ إعداد Cloudinary
+            $cloudinary = new Cloudinary([
+                'cloud' => [
+                    'cloud_name' => config('cloudinary.cloud_name', env('CLOUDINARY_CLOUD_NAME')),
+                    'api_key'    => config('cloudinary.api_key', env('CLOUDINARY_API_KEY')),
+                    'api_secret' => config('cloudinary.api_secret', env('CLOUDINARY_API_SECRET')),
+                ],
+                'url' => [
+                    'secure' => true
+                ]
+            ]);
+            
+            // ✅ رفع الملف
+            $uploadedFile = $cloudinary->uploadApi()->upload(
+                $file->getRealPath(),
+                [
+                    'folder'        => "media/{$folder}",
+                    'resource_type' => 'auto',
+                    'public_id'     => Str::random(40),
+                ]
+            );
+
             // ✅ إنشاء السجل
             $media = Media::create([
                 'original_name'   => $file->getClientOriginalName(),
-                'file_name'       => $fileName,
-                'file_path'       => $filePath,
-                'file_url'        => $fileUrl, // ✅ رابط كامل
+                'file_name'       => $uploadedFile['public_id'], // استخدام معرّف Cloudinary كاسم الملف
+                'file_path'       => $uploadedFile['public_id'], // المسار
+                'file_url'        => $uploadedFile['secure_url'], // ✅ رابط كامل
                 'mime_type'       => $file->getMimeType(),
-                'file_size'       => $file->getSize(),
-                'file_size_human' => $this->humanFileSize($file->getSize()),
+                'file_size'       => $uploadedFile['bytes'],
+                'file_size_human' => $this->humanFileSize($uploadedFile['bytes']),
                 'alt_text'        => $request->alt_text,
                 'folder'          => $folder,
-                'disk'            => 'public',
+                'disk'            => 'cloudinary',
                 'uploaded_by'     => Auth::id(),
             ]);
 
@@ -74,6 +128,11 @@ class MediaController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Media upload error: ' . $e->getMessage());
+            Log::error('Cloudinary config: ' . json_encode([
+                'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                'api_key' => env('CLOUDINARY_API_KEY'),
+                'has_secret' => !empty(env('CLOUDINARY_API_SECRET')),
+            ]));
             return $this->error('فشل رفع الملف: ' . $e->getMessage(), 500);
         }
     }
@@ -134,4 +193,10 @@ class MediaController extends Controller
         
         return sprintf("%.1f %s", $bytes / pow(1024, $factor), $units[$factor] ?? 'TB');
     }
+    // private function humanFileSize($bytes, $decimals = 2)
+    // {
+    //     $size = ['B', 'KB', 'MB', 'GB', 'TB'];
+    //     $factor = floor((strlen($bytes) - 1) / 3);
+    //     return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . ' ' . @$size[$factor];
+    // }
 }
