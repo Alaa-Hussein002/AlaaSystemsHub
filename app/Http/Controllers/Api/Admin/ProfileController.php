@@ -17,15 +17,6 @@ class ProfileController extends Controller
 {
     use ApiResponse;
 
-    // public function show()
-    // {
-    //     $profile = PersonalProfile::first();
-    //     if (!$profile) {
-    //         return $this->notFound('لا يوجد ملف شخصي');
-    //     }
-    //     return $this->success(new ProfileResource($profile));
-    // }
-
     public function update(Request $request)
     {
         try {
