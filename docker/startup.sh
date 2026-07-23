@@ -4,6 +4,15 @@ set -e
 echo "🚀 Starting Alaa Systems Hub API..."
 echo "================================================"
 
+# ✅ إصلاح Permissions أولاً
+echo "🔧 Fixing permissions..."
+mkdir -p /var/www/storage/logs
+touch /var/www/storage/logs/laravel.log
+chown -R www-data:www-data /var/www/storage
+chmod -R 775 /var/www/storage
+chmod 666 /var/www/storage/logs/laravel.log
+echo "✅ Permissions fixed"
+
 # ✅ إنشاء .env من متغيرات البيئة
 echo "📝 Creating .env from environment variables..."
 cat > /var/www/.env << EOF

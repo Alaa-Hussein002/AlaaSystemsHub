@@ -27,78 +27,42 @@ class ProfileController extends Controller
     // }
 
     public function update(Request $request)
-{
-    try {
-        $profile = PersonalProfile::first();
+    {
+        try {
+            DB::beginTransaction();
+            
+            $profile = PersonalProfile::first();
 
-        if (!$profile) {
-            $profile = new PersonalProfile();
-        }
+            if (!$profile) {
+                $profile = new PersonalProfile();
+            }
 
-        // ✅ تنظيف البيانات قبل الحفظ
-        $data = $request->all();
-        
-        // تنظيف highlights
-        if (isset($data['highlights'])) {
-            $data['highlights'] = collect($data['highlights'])->map(function($item) {
-                if (isset($item['icon']) && str_contains($item['icon'], 'localhost')) {
-                    $item['icon'] = null;
-                }
-                return $item;
-            })->filter(function($item) {
-                return !empty($item['icon']);
-            })->values()->toArray();
-        }
-        
-        // تنظيف tools
-        if (isset($data['tools'])) {
-            $data['tools'] = collect($data['tools'])->map(function($item) {
-                if (isset($item['icon']) && str_contains($item['icon'], 'localhost')) {
-                    $item['icon'] = null;
-                }
-                return $item;
-            })->filter(function($item) {
-                return !empty($item['icon']);
-            })->values()->toArray();
-        }
-        
-        // تنظيف seo
-        if (isset($data['seo']['og_image']) && str_contains($data['seo']['og_image'], 'localhost')) {
-            $data['seo']['og_image'] = null;
-        }
-        
-        // تنظيف photo
-        if (isset($data['photo']) && str_contains($data['photo'], 'localhost')) {
-            unset($data['photo']);
-        }
-        
-        // تنظيف cv_file
-        if (isset($data['cv_file']) && str_contains($data['cv_file'], 'localhost')) {
-            unset($data['cv_file']);
-        }
+            $profile->fill($request->all());
+            $profile->save();
 
-        $profile->fill($data);
-        $profile->save();
+            Cache::forget('personal_profile');
+            Cache::forget('public_profile');
 
-        Cache::forget('personal_profile');
-        Cache::forget('public_profile');
+            ActivityLog::log('update', 'profile', 'تم تحديث الملف الشخصي');
 
-        ActivityLog::log('update', 'profile', 'تم تحديث الملف الشخصي');
+            DB::commit();
 
-        return $this->success(
-            new ProfileResource($profile), 
-            'تم تحديث الملف الشخصي بنجاح'
-        );
-        
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'error' => $e->getMessage(),
-            'line' => $e->getLine(),
-            'file' => $e->getFile(),
-        ], 500);
+            return $this->success(
+                new ProfileResource($profile), 
+                'تم تحديث الملف الشخصي بنجاح'
+            );
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ], 500);
+        }
     }
-}
 
     public function show()
     {
@@ -114,28 +78,6 @@ class ProfileController extends Controller
         } catch (\Exception $e) {
             Log::error('Profile show error: ' . $e->getMessage());
             return $this->error('فشل جلب الملف الشخصي', 500);
-        }
-    }
-
-    public function debug()
-    {
-        try {
-            $profile = PersonalProfile::first();
-            
-            return response()->json([
-                'success' => true,
-                'profile' => $profile,
-                'updated_at' => $profile?->updated_at?->toDateTimeString(),
-                'cache' => Cache::get('public_profile'),
-            ]);
-            
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ], 500);
         }
     }
 }
