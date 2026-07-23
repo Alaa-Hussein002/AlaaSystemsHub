@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use App\Models\PersonalProfile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
 
 // ========================================
 // Controllers - Auth & Health
@@ -163,6 +165,34 @@ Route::get('/test-profile-simple', function() {
             'line' => $e->getLine(),
             'file' => $e->getFile(),
             'trace' => $e->getTraceAsString(),
+        ], 500);
+    }
+});
+
+// ✅ Test PUT بدون authentication
+Route::put('/test-profile-update', function(Request $request) {
+    try {
+        Log::info('Test update received', ['data' => $request->all()]);
+        
+        $profile = PersonalProfile::first();
+        
+        if (!$profile) {
+            return response()->json(['error' => 'No profile found'], 404);
+        }
+        
+        $profile->update(['full_name' => ['ar' => 'اختبار', 'en' => 'Test']]);
+        $profile->refresh();
+        
+        return response()->json([
+            'success' => true,
+            'profile' => $profile,
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile(),
         ], 500);
     }
 });

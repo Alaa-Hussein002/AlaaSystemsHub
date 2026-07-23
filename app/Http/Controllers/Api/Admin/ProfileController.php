@@ -11,80 +11,69 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class ProfileController extends Controller
 {
     use ApiResponse;
 
-    public function show()
-    {
-        $profile = PersonalProfile::first();
-        if (!$profile) {
-            return $this->notFound('لا يوجد ملف شخصي');
-        }
-        return $this->success(new ProfileResource($profile));
-    }
+    // public function show()
+    // {
+    //     $profile = PersonalProfile::first();
+    //     if (!$profile) {
+    //         return $this->notFound('لا يوجد ملف شخصي');
+    //     }
+    //     return $this->success(new ProfileResource($profile));
+    // }
 
         public function update(Request $request)
     {
+        // ✅ Log كل البيانات الواردة
+        Log::info('Profile update request received', [
+            'data' => $request->except(['photo', 'cv_file']),
+            'has_photo' => $request->hasFile('photo'),
+            'has_cv' => $request->hasFile('cv_file'),
+        ]);
+
         try {
+            // ✅ بدء Transaction
+            DB::beginTransaction();
+
             $profile = PersonalProfile::first();
 
-            // ✅ Log قبل التحديث
             if ($profile) {
-                Log::info('Before update:', [
-                    'id' => $profile->id,
-                    'full_name' => $profile->full_name,
-                    'bio' => $profile->bio,
-                    'updated_at' => $profile->updated_at,
-                    'request_data' => $request->except(['photo', 'cv_file']), // لعدم إغراق اللوج بالملفات
-                ]);
-            }
-
-            // ✅ إنشاء أو تحديث
-            if (!$profile) {
-                Log::info('Creating new profile');
-                $profile = PersonalProfile::create($request->all());
-                Log::info('Profile created:', [
-                    'id' => $profile->id,
-                    'full_name' => $profile->full_name,
-                ]);
-            } else {
-                Log::info('Updating existing profile');
-                $profile->update($request->all());
+                Log::info('Updating existing profile', ['id' => $profile->id]);
                 
-                // ✅ Log بعد التحديث مباشرة
-                Log::info('After update (before refresh):', [
-                    'id' => $profile->id,
-                    'full_name' => $profile->full_name,
-                    'updated_at' => $profile->updated_at,
+                // ✅ تحديث البيانات
+                $updated = $profile->update($request->all());
+                
+                Log::info('Update result', [
+                    'updated' => $updated,
+                    'profile_id' => $profile->id,
                 ]);
                 
-                // ✅ تحديث الـ timestamp يدوياً (للتأكيد)
+                // ✅ تحديث timestamp
                 $profile->touch();
                 
-                // ✅ إعادة تحميل من DB
+                // ✅ إعادة تحميل
                 $profile->refresh();
                 
-                Log::info('After refresh:', [
-                    'id' => $profile->id,
-                    'full_name' => $profile->full_name,
-                    'updated_at' => $profile->updated_at,
-                ]);
+            } else {
+                Log::info('Creating new profile');
+                $profile = PersonalProfile::create($request->all());
             }
 
             // ✅ مسح الـ cache
             Cache::forget('personal_profile');
             Cache::forget('public_profile');
-            Cache::tags(['profile'])->flush(); // مسح كل cache مرتبط بالـ profile
-            
-            Log::info('Cache cleared for profile');
 
             // ✅ تسجيل النشاط
             ActivityLog::log('update', 'profile', 'تم تحديث الملف الشخصي');
 
-            // ✅ التحقق من البيانات المُرجعة
-            Log::info('Returning profile:', [
+            // ✅ Commit Transaction
+            DB::commit();
+
+            Log::info('Profile updated successfully', [
                 'id' => $profile->id,
                 'full_name' => $profile->full_name,
             ]);
@@ -94,11 +83,24 @@ class ProfileController extends Controller
                 'تم تحديث الملف الشخصي بنجاح'
             );
             
+        } catch (\Illuminate\Database\QueryException $e) {
+            DB::rollBack();
+            
+            Log::error('Database query error in profile update', [
+                'error' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+            ]);
+            
+            return $this->error('خطأ في قاعدة البيانات: ' . $e->getMessage(), 500);
+            
         } catch (\Exception $e) {
-            Log::error('Profile update error:', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
+            DB::rollBack();
+            
+            Log::error('Profile update failed', [
+                'error' => $e->getMessage(),
                 'line' => $e->getLine(),
+                'file' => $e->getFile(),
                 'trace' => $e->getTraceAsString(),
             ]);
             
@@ -106,8 +108,24 @@ class ProfileController extends Controller
         }
     }
 
-    // ✅ دالة جديدة للتحقق من البيانات
-        public function debug()
+    public function show()
+    {
+        try {
+            $profile = PersonalProfile::first();
+            
+            if (!$profile) {
+                return $this->error('الملف الشخصي غير موجود', 404);
+            }
+
+            return $this->success(new ProfileResource($profile));
+            
+        } catch (\Exception $e) {
+            Log::error('Profile show error: ' . $e->getMessage());
+            return $this->error('فشل جلب الملف الشخصي', 500);
+        }
+    }
+
+    public function debug()
     {
         try {
             $profile = PersonalProfile::first();

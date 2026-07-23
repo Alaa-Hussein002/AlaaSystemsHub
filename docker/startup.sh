@@ -224,6 +224,12 @@ echo "✅ Application ready and listening on port 8080"
 echo "   Environment: ${APP_ENV:-unknown}"
 echo "   Debug: ${APP_DEBUG:-false}"
 echo "================================================"
+# عرض آخر أخطاء Laravel
+echo "================================================"
+echo "📋 Laravel Logs (last 30 lines):"
+echo "================================================"
+tail -30 /var/www/storage/logs/laravel.log 2>/dev/null || echo "No logs yet"
+echo "================================================"
 
 # Start supervisor
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
