@@ -107,21 +107,24 @@ class ProfileController extends Controller
     }
 
     // ✅ دالة جديدة للتحقق من البيانات
-    public function debug()
+        public function debug()
     {
         try {
             $profile = PersonalProfile::first();
             
             return response()->json([
-                'from_db' => $profile,
-                'from_cache' => Cache::get('public_profile'),
-                'updated_at' => $profile?->updated_at,
-                'updated_at_human' => $profile?->updated_at?->diffForHumans(),
-                'updated_at_timestamp' => $profile?->updated_at?->timestamp,
+                'success' => true,
+                'profile' => $profile,
+                'updated_at' => $profile?->updated_at?->toDateTimeString(),
+                'cache' => Cache::get('public_profile'),
             ]);
+            
         } catch (\Exception $e) {
             return response()->json([
+                'success' => false,
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ], 500);
         }
     }

@@ -145,6 +145,28 @@ Route::get('/test-profile-debug', function() {
     }
 });
 
+Route::get('/test-profile-simple', function() {
+    try {
+        $profile = PersonalProfile::first();
+        
+        return response()->json([
+            'success' => true,
+            'has_profile' => $profile ? true : false,
+            'profile_id' => $profile?->id,
+            'full_name' => $profile?->full_name,
+            'updated_at' => $profile?->updated_at?->toDateTimeString(),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile(),
+            'trace' => $e->getTraceAsString(),
+        ], 500);
+    }
+});
+
 // ========================================
 // 🔐 Auth Routes
 // ========================================
