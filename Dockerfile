@@ -58,6 +58,9 @@ RUN chown -R www-data:www-data /var/www \
     && chmod -R 775 /var/www/storage \
     && chmod -R 775 /var/www/bootstrap/cache
 
+# ✅ نسخ إعدادات PHP
+COPY docker/php.ini /usr/local/etc/php/conf.d/uploads.ini
+
 # Copy configs
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/default.conf /etc/nginx/http.d/default.conf
