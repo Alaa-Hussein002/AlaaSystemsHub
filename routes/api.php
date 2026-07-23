@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use App\Models\PersonalProfile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 // ========================================
 // Controllers - Auth & Health
@@ -111,6 +112,16 @@ use App\Http\Controllers\Api\Public\ArticleController as PublicArticleController
 //     }
 // });
 
+Route::get('/debug-profile', function() {
+    $profile = \App\Models\PersonalProfile::first();
+    
+    return response()->json([
+        'from_db' => $profile,
+        'from_cache' => Cache::get('public_profile'),
+        'updated_at' => $profile->updated_at,
+        'updated_at_human' => $profile->updated_at->diffForHumans(),
+    ]);
+});
 
 // ========================================
 // 🔐 Auth Routes
@@ -221,6 +232,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     // Profile
     Route::get('/profile', [AdminProfileController::class, 'show']);
     Route::put('/profile', [AdminProfileController::class, 'update']);
+    Route::get('/profile/debug', [ProfileController::class, 'debug']);
 
     // Projects
     Route::apiResource('projects', AdminProjectController::class);

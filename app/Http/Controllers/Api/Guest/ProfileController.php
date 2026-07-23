@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ProfileResource;
 use App\Models\PersonalProfile;
 use App\Traits\ApiResponse;
+use Illuminate\Support\Facades\Log;
 
 class ProfileController extends Controller
 {
@@ -14,25 +15,31 @@ class ProfileController extends Controller
 
     public function index()
     {
-        $profile = PersonalProfile::first();
-        
-        if (!$profile) {
-            // Return empty structure if no profile exists yet
-            return $this->success([
-                'full_name' => ['ar' => '', 'en' => ''],
-                'title' => ['ar' => '', 'en' => ''],
-                'bio' => ['ar' => '', 'en' => ''],
-                'photo' => null,
-                'cv_file' => null,
-                'rotating_roles' => [],
-                'availability_status' => 'available',
-                'tech_display' => [],
-                'tools' => [],
-                'code_block_lines' => [],
-                'highlights' => [],
-            ]);
-        }
+        try {
 
-        return $this->success(new ProfileResource($profile));
-    }
+            $profile = PersonalProfile::first();
+            
+            if (!$profile) {
+                // Return empty structure if no profile exists yet
+                return $this->success([
+                    'full_name' => ['ar' => '', 'en' => ''],
+                    'title' => ['ar' => '', 'en' => ''],
+                    'bio' => ['ar' => '', 'en' => ''],
+                    'photo' => null,
+                    'cv_file' => null,
+                    'rotating_roles' => [],
+                    'availability_status' => 'available',
+                    'tech_display' => [],
+                    'tools' => [],
+                    'code_block_lines' => [],
+                    'highlights' => [],
+                ]);
+            }
+    
+            return $this->success(new ProfileResource($profile));
+        } catch (\Exception $e) {
+            Log::error('Profile fetch error: ' . $e->getMessage());
+            return $this->error('فشل جلب الملف الشخصي', 500);
+        }
+    }    
 }

@@ -81,6 +81,7 @@ fi
 echo "🧹 Clearing ALL caches..."
 rm -rf /var/www/bootstrap/cache/*.php
 php artisan config:clear 2>/dev/null || true
+php artisan cache:clear 2>/dev/null || true
 php artisan route:clear 2>/dev/null || true
 php artisan view:clear 2>/dev/null || true
 
