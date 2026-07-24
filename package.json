@@ -16,5 +16,12 @@
     },
     "dependencies": {
         "react-helmet-async": "^3.0.0"
+    },
+    "reactSnap": {
+      "inlineCss": true,
+      "minifyHtml": {
+        "collapseWhitespace": false,
+        "removeComments": false
+      }
     }
 }
