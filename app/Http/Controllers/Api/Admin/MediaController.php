@@ -16,22 +16,6 @@ use Cloudinary\Cloudinary;
 class MediaController extends Controller
 {
     use ApiResponse;
-
-    // protected $cloudinary;
-    // public function __construct()
-    // {
-    //     // ✅ إعداد Cloudinary يدوياً
-    //     $this->cloudinary = new Cloudinary([
-    //         'cloud' => [
-    //             'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
-    //             'api_key'    => env('CLOUDINARY_API_KEY'),
-    //             'api_secret' => env('CLOUDINARY_API_SECRET'),
-    //         ],
-    //         'url' => [
-    //             'secure' => true
-    //         ]
-    //     ]);
-    // }
     public function index(Request $request)
     {
         $query = Media::orderBy('created_at', 'desc');
@@ -59,31 +43,6 @@ class MediaController extends Controller
         try {
             $file = $request->file('file');
             $folder = Str::slug($request->get('folder', 'general'));
-            
-            // ✅ توليد اسم فريد للملف
-            // $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
-            // ✅ رفع إلى Cloudinary
-            // $uploadedFile = $file->storeOnCloudinary("media/{$folder}");
-            
-            // ✅ الحصول على البيانات
-            // $fileUrl = $uploadedFile->getSecurePath(); // رابط HTTPS
-            // $publicId = $uploadedFile->getPublicId(); // معرّف الملف
-            // $filePath = $uploadedFile->getPath(); // المسار
-
-            // ✅ حفظ الملف
-            // $filePath = $file->storeAs("media/{$folder}", $fileName, 'public');
-            
-            // ✅ توليد الرابط الكامل
-            // $fileUrl = Storage::url($filePath);
-
-            // $uploadedFile = $this->cloudinary->uploadApi()->upload(
-            //     $file->getRealPath(),
-            //     [
-            //         'folder' => "media/{$folder}",
-            //         'resource_type' => 'auto', // صورة/فيديو/ملف تلقائياً
-            //         'public_id' => Str::random(40), // اسم فريد
-            //     ]
-            // );
             
             // ✅ إعداد Cloudinary
             $cloudinary = new Cloudinary([
@@ -193,10 +152,4 @@ class MediaController extends Controller
         
         return sprintf("%.1f %s", $bytes / pow(1024, $factor), $units[$factor] ?? 'TB');
     }
-    // private function humanFileSize($bytes, $decimals = 2)
-    // {
-    //     $size = ['B', 'KB', 'MB', 'GB', 'TB'];
-    //     $factor = floor((strlen($bytes) - 1) / 3);
-    //     return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . ' ' . @$size[$factor];
-    // }
 }

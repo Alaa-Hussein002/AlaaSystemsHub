@@ -166,6 +166,14 @@ class EducationController extends Controller
             return null;
         }
 
+        $path = trim($path);
+    
+        // ✅ روابط Cloudinary و CDN - أرجعها كما هي
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
+        }
+
+
         // إذا كان رابط كامل، استخرج المسار النسبي
         if (preg_match('#/storage/(.+)$#', $path, $matches)) {
             return $matches[1];
