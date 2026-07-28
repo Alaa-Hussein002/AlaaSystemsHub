@@ -48,7 +48,7 @@ class ArticleController extends Controller
             'slug' => 'nullable|string|unique:articles,slug',
             'excerpt' => 'nullable|string',
             'blocks' => 'nullable|array',
-            'cover_image' => 'nullable|string',
+            'cover_image' => 'nullable|string|max:1000',
             'category' => 'nullable|string',
             'tags' => 'nullable|array',
             'sources' => 'nullable|array',
@@ -128,7 +128,7 @@ class ArticleController extends Controller
             'slug' => 'nullable|string|unique:articles,slug,' . $id,
             'excerpt' => 'nullable|string',
             'blocks' => 'nullable|array',
-            'cover_image' => 'nullable|string',
+            'cover_image' => 'nullable|string|max:1000',
             'category' => 'nullable|string',
             'tags' => 'nullable|array',
             'sources' => 'nullable|array',
@@ -207,6 +207,18 @@ class ArticleController extends Controller
             return null;
         }
 
+        $path = trim($path);
+    
+        // ✅ إذا كان رابط Cloudinary كامل
+        if (Str::startsWith($path, 'https://res.cloudinary.com')) {
+            return $path;
+        }
+    
+        // ✅ إذا كان رابط كامل آخر
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
+        }
+
         // إذا كان رابط كامل، استخرج المسار النسبي فقط
         if (preg_match('#/storage/(.+)$#', $path, $matches)) {
             return $matches[1];
@@ -221,15 +233,15 @@ class ArticleController extends Controller
     /**
      * ✅ تنظيف الصور في البلوكات
      */
-    private function cleanBlocks(array $blocks): array
-    {
-        return array_map(function ($block) {
-            // تنظيف صور البلوكات فقط
-            if (isset($block['type']) && $block['type'] === 'image' && !empty($block['content'])) {
-                $block['content'] = $this->cleanImagePath($block['content']);
-            }
-            
-            return $block;
-        }, $blocks);
-    }
+private function cleanBlocks(array $blocks): array
+{
+    return array_map(function ($block) {
+        // ✅ تنظيف صور البلوكات
+        if (isset($block['type']) && $block['type'] === 'image' && !empty($block['content'])) {
+            $block['content'] = $this->cleanImagePath($block['content']);
+        }
+        
+        return $block;
+    }, $blocks);
+}
 }
