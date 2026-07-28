@@ -16,13 +16,9 @@ class CertificateResource extends JsonResource
             'title' => $this->title,
             'issuer' => $this->issuer,
             
-            // ✅ الصور - روابط كاملة
-            'issuer_logo' => $this->issuer_logo 
-                ? url('storage/' . $this->issuer_logo) 
-                : null,
-            'certificate_image' => $this->certificate_image 
-                ? url('storage/' . $this->certificate_image) 
-                : null,
+        // ✅ معالجة الصور
+        'issuer_logo' => $this->getImageUrl($this->issuer_logo),
+        'certificate_image' => $this->getImageUrl($this->certificate_image),
             
             // بيانات الاعتماد
             'credential_id' => $this->credential_id,
@@ -48,5 +44,23 @@ class CertificateResource extends JsonResource
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * الحصول على رابط الصورة الصحيح
+     */
+    private function getImageUrl(?string $path): ?string
+    {
+        if (empty($path)) {
+            return null;
+        }
+    
+        // رابط كامل
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
+        }
+    
+        // مسار محلي
+        return asset('storage/' . $path);
     }
 }
