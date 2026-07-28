@@ -4,6 +4,7 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Str;
 
 class ArticleResource extends JsonResource
 {
@@ -15,10 +16,10 @@ class ArticleResource extends JsonResource
             'slug' => $this->slug,
             'excerpt' => $this->excerpt,
             
-            // ✅ معالجة البلوكات (تنظيف الصور)
+            // ✅ معالجة البلوكات
             'blocks' => $this->processBlocks($this->blocks ?? []),
             
-            // ✅ صورة الغلاف - رابط نظيف
+            // ✅ صورة الغلاف
             'cover_image' => $this->cleanImageUrl($this->cover_image),
             
             'category' => $this->category,
@@ -29,7 +30,6 @@ class ArticleResource extends JsonResource
             'is_featured' => $this->is_featured ?? false,
             'is_published' => $this->is_published ?? false,
             
-            // ✅ حساب وقت القراءة تلقائياً إذا لم يكن موجوداً
             'reading_time' => $this->reading_time ?? $this->calculateReadingTime(),
             
             'views_count' => $this->views_count ?? 0,
@@ -37,7 +37,6 @@ class ArticleResource extends JsonResource
             'author' => $this->author ?? ['name' => 'علاء حسين'],
             'seo' => $this->seo ?? [],
             
-            // ✅ استخدام toIso8601String بدلاً من toISOString
             'published_at' => $this->published_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
@@ -45,7 +44,7 @@ class ArticleResource extends JsonResource
     }
 
     /**
-     * ✅ معالجة البلوكات وتنظيف روابط الصور
+     * ✅ معالجة البلوكات
      */
     private function processBlocks($blocks)
     {
@@ -54,8 +53,8 @@ class ArticleResource extends JsonResource
         }
 
         return array_map(function ($block) {
-            // تنظيف صور البلوكات من نوع image
-            if (isset($block['type']) && $block['type'] === 'image' && isset($block['content'])) {
+            // معالجة صور البلوكات
+            if (isset($block['type']) && $block['type'] === 'image' && !empty($block['content'])) {
                 $block['content'] = $this->cleanImageUrl($block['content']);
             }
 
@@ -64,7 +63,7 @@ class ArticleResource extends JsonResource
     }
 
     /**
-     * ✅ تنظيف رابط الصورة
+     * ✅ تنظيف رابط الصورة - النسخة الصحيحة
      */
     private function cleanImageUrl($url)
     {
@@ -72,45 +71,47 @@ class ArticleResource extends JsonResource
             return null;
         }
 
-        // إذا كان رابط كامل بالفعل ولا يحتوي على تكرار
-        if (preg_match('#^https?://[^/]+/storage/[^/]#', $url) && 
-            !preg_match('#/storage/.*?/storage/#', $url)) {
-            return $url;
+        $url = trim($url);
+
+        // ✅ 1. Cloudinary أو أي CDN خارجي
+        if (Str::startsWith($url, ['http://', 'https://'])) {
+            // تحقق من صحة الرابط
+            if (filter_var($url, FILTER_VALIDATE_URL)) {
+                return $url; // ✅ رابط صحيح، أرجعه كما هو
+            }
         }
 
-        // إزالة /storage/ المكرر
-        $cleanPath = preg_replace('#(/storage/)+#', '/storage/', $url);
+        // ✅ 2. مسار محلي - نظفه
+        // إزالة التكرار
+        $url = preg_replace('#(/storage/)+#', '/storage/', $url);
         
-        // إزالة http://localhost:8000 إن وجد
-        $cleanPath = preg_replace('#^https?://[^/]+/storage/#', '', $cleanPath);
-        
+        // استخراج المسار
+        if (preg_match('#/storage/(.+)$#', $url, $matches)) {
+            return asset('storage/' . $matches[1]);
+        }
+
         // إزالة /storage/ من البداية
-        $cleanPath = preg_replace('#^/?storage/#', '', $cleanPath);
+        $cleanPath = preg_replace('#^/?storage/#', '', $url);
         
-        // إرجاع رابط كامل
-        return url('storage/' . $cleanPath);
+        return asset('storage/' . $cleanPath);
     }
 
     /**
-     * ✅ حساب وقت القراءة من البلوكات
+     * ✅ حساب وقت القراءة
      */
     private function calculateReadingTime()
     {
         $wordCount = 0;
         $blocks = $this->blocks ?? [];
 
-        // حساب الكلمات من البلوكات النصية فقط
         foreach ($blocks as $block) {
-            if (isset($block['type']) && $block['type'] === 'text' && isset($block['content'])) {
-                // إزالة HTML tags وحساب الكلمات
+            if (isset($block['type']) && $block['type'] === 'text' && !empty($block['content'])) {
                 $text = strip_tags($block['content']);
                 $words = preg_split('/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY);
                 $wordCount += count($words);
             }
         }
 
-        // متوسط القراءة: 200 كلمة في الدقيقة للعربي
-        // 250 كلمة للإنجليزي
         $wordsPerMinute = $this->language === 'ar' ? 200 : 250;
         
         return max(1, ceil($wordCount / $wordsPerMinute));
