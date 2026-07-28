@@ -75,10 +75,7 @@ class ArticleResource extends JsonResource
 
         // ✅ 1. Cloudinary أو أي CDN خارجي
         if (Str::startsWith($url, ['http://', 'https://'])) {
-            // تحقق من صحة الرابط
-            if (filter_var($url, FILTER_VALIDATE_URL)) {
-                return $url; // ✅ رابط صحيح، أرجعه كما هو
-            }
+            return $url;
         }
 
         // ✅ 2. مسار محلي - نظفه
