@@ -18,10 +18,7 @@ class EducationResource extends JsonResource
             'degree' => $this->degree ?? ['ar' => '', 'en' => ''],
             'field_of_study' => $this->field_of_study,
             
-            // ✅ الشعار - رابط كامل
-            'institution_logo' => $this->institution_logo 
-                ? url('storage/' . $this->institution_logo) 
-                : null,
+            'institution_logo' => $this->getInstitutionLogoUrl(),
             
             // التواريخ والموقع
             'location' => $this->location,
