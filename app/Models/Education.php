@@ -72,4 +72,22 @@ class Education extends Model
             'total_months' => $start->diffInMonths($end),
         ];
     }
+
+    /**
+ * الحصول على رابط الشعار الكامل
+ */
+public function getInstitutionLogoUrl(): ?string
+{
+    if (empty($this->institution_logo)) {
+        return null;
+    }
+
+    // ✅ إذا كان رابط كامل (Cloudinary)، أرجعه كما هو
+    if (filter_var($this->institution_logo, FILTER_VALIDATE_URL)) {
+        return $this->institution_logo;
+    }
+
+    // ✅ مسار محلي - أضف asset
+    return asset('storage/' . $this->institution_logo);
+}
 }
