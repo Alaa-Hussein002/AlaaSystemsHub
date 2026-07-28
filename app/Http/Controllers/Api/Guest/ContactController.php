@@ -15,8 +15,76 @@ class ContactController extends Controller
 {
     use ApiResponse;
 
+    // public function store(Request $request)
+    // {
+    //     $validated = $request->validate([
+    //         'name' => 'required|string|max:255',
+    //         'email' => 'required|email|max:255',
+    //         'phone' => 'required|string|max:20|regex:/^\+\d{1,3}\d{7,12}$/',
+    //         'subject' => 'required|string|max:255',
+    //         'message' => 'required|string|max:2000',
+    //     ], [
+    //         'name.required' => 'الاسم مطلوب',
+    //         'email.required' => 'البريد الإلكتروني مطلوب',
+    //         'email.email' => 'البريد الإلكتروني غير صحيح',
+    //         'phone.required' => 'رقم الهاتف مطلوب',
+    //         'phone.regex' => 'صيغة رقم الهاتف غير صحيحة',
+    //         'subject.required' => 'الموضوع مطلوب',
+    //         'message.required' => 'الرسالة مطلوبة',
+    //     ]);
+
+    //     // Check for spam
+    //     $isSpam = $this->detectSpam($request);
+
+    //     // Create contact message
+    //     $message = ContactMessage::create([
+    //         'name' => $validated['name'],
+    //         'email' => $validated['email'],
+    //         'phone' => $validated['phone'],
+    //         'subject' => $validated['subject'],
+    //         'message' => $validated['message'],
+    //         'category' => $this->detectCategory($validated['subject']),
+    //         'priority' => $this->detectPriority($validated['message']),
+    //         'status' => 'unread',
+    //         'ip_address' => $request->ip(),
+    //         'is_spam' => $isSpam,
+    //     ]);
+
+    //     // Log activity
+    //     try {
+    //         ActivityLog::log(
+    //             'contact_form_submitted',
+    //             'messages',
+    //             "رسالة جديدة من {$validated['name']}",
+    //             'contact_message',
+    //             $message->id
+    //         );
+    //     } catch (\Exception $e) {
+    //         Log::error('Activity log failed: ' . $e->getMessage());
+    //     }
+
+    //     // Send notifications immediately
+    //     try {
+    //         $this->sendNotifications($message);
+    //     } catch (\Exception $e) {
+    //         Log::error('Failed to send notifications: ' . $e->getMessage());
+    //     }
+
+    //     return $this->success(
+    //         null,
+    //         'تم إرسال رسالتك بنجاح! سنتواصل معك قريباً'
+    //     );
+    // }
+
     public function store(Request $request)
-    {
+{
+    // ✅ Log البداية
+    Log::info('=== Contact Form Started ===', [
+        'data' => $request->all(),
+        'ip' => $request->ip(),
+    ]);
+
+    try {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
@@ -33,10 +101,32 @@ class ContactController extends Controller
             'message.required' => 'الرسالة مطلوبة',
         ]);
 
-        // Check for spam
-        $isSpam = $this->detectSpam($request);
+        Log::info('✅ Validation passed');
 
-        // Create contact message
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        Log::error('❌ Validation failed', [
+            'errors' => $e->errors()
+        ]);
+        throw $e;
+    }
+
+    // ✅ Check for spam
+    $isSpam = false;
+    try {
+        Log::info('Checking spam...');
+        $isSpam = $this->detectSpam($request);
+        Log::info('✅ Spam check done', ['is_spam' => $isSpam]);
+    } catch (\Exception $e) {
+        Log::warning('⚠️ Spam detection failed', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+    }
+
+    // ✅ Create contact message
+    try {
+        Log::info('Creating message...');
+        
         $message = ContactMessage::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
@@ -50,32 +140,57 @@ class ContactController extends Controller
             'is_spam' => $isSpam,
         ]);
 
-        // Log activity
-        try {
-            ActivityLog::log(
-                'contact_form_submitted',
-                'messages',
-                "رسالة جديدة من {$validated['name']}",
-                'contact_message',
-                $message->id
-            );
-        } catch (\Exception $e) {
-            Log::error('Activity log failed: ' . $e->getMessage());
-        }
+        Log::info('✅ Message created', ['id' => $message->id]);
 
-        // Send notifications immediately
-        try {
-            $this->sendNotifications($message);
-        } catch (\Exception $e) {
-            Log::error('Failed to send notifications: ' . $e->getMessage());
-        }
-
-        return $this->success(
-            null,
-            'تم إرسال رسالتك بنجاح! سنتواصل معك قريباً'
+    } catch (\Exception $e) {
+        Log::error('❌ Failed to create message', [
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+        
+        return $this->error(
+            'حدث خطأ أثناء حفظ رسالتك. يرجى المحاولة لاحقاً',
+            500
         );
     }
 
+    // ✅ Log activity
+    try {
+        Log::info('Logging activity...');
+        ActivityLog::log(
+            'contact_form_submitted',
+            'messages',
+            "رسالة جديدة من {$validated['name']}",
+            'contact_message',
+            $message->id
+        );
+        Log::info('✅ Activity logged');
+    } catch (\Exception $e) {
+        Log::error('❌ Activity log failed', [
+            'error' => $e->getMessage()
+        ]);
+    }
+
+    // ✅ Send notifications
+    try {
+        Log::info('Sending notifications...');
+        $this->sendNotifications($message);
+        Log::info('✅ Notifications sent');
+    } catch (\Exception $e) {
+        Log::error('❌ Notifications failed', [
+            'error' => $e->getMessage()
+        ]);
+    }
+
+    Log::info('=== Contact Form Completed ===');
+
+    return $this->success(
+        null,
+        'تم إرسال رسالتك بنجاح! سنتواصل معك قريباً'
+    );
+}
     private function sendNotifications($message)
     {
         Log::info('=== Starting Notifications ===');
