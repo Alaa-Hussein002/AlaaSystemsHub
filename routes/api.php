@@ -62,6 +62,29 @@ use App\Http\Controllers\Api\Admin\ArticleController as AdminArticleController;
 use App\Http\Controllers\Api\Public\ArticleController as PublicArticleController;
 
 // ========================================
+// Health Check Route
+// ========================================
+Route::get('/health', function () {
+    try {
+        // ✅ فحص قاعدة البيانات
+        DB::connection()->getPdo();
+        $dbStatus = 'connected';
+    } catch (\Exception $e) {
+        $dbStatus = 'error';
+    }
+
+    return response()->json([
+        'status' => 'healthy',
+        'service' => 'Alaa Systems Hub',
+        'timestamp' => now()->toIso8601String(),
+        'database' => $dbStatus,
+        'php_version' => PHP_VERSION,
+        'laravel_version' => app()->version(),
+        'uptime' => true,
+    ], 200);
+});
+
+// ========================================
 // 🔐 Auth Routes
 // ========================================
 
