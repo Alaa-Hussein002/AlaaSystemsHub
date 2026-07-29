@@ -10,6 +10,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Resend;
 
 class ContactController extends Controller
 {
@@ -134,41 +135,25 @@ class ContactController extends Controller
     private function sendEmailNotification($message)
     {
         try {
-            // ✅ جلب إيميل الأدمن
             $adminProfile = PersonalProfile::first();
-            
-            if (!$adminProfile) {
-                Log::warning('❌ No admin profile found');
-                return;
-            }
-
             $contactData = $this->parseContactData($adminProfile->contact);
-            $adminEmail = $contactData['email'] ?? null;
-
-            if (!$adminEmail) {
-                Log::warning('⚠️ Admin email not found in contact data');
-                return;
-            }
-
-            Log::info('📧 Sending email to: ' . $adminEmail);
-
-            // ✅ بناء محتوى الإيميل
-            $emailBody = $this->buildEmailBody($message);
-
-            // ✅ إرسال الإيميل
-            Mail::raw($emailBody, function ($mail) use ($adminEmail, $message) {
-                $mail->to($adminEmail)
-                     ->subject("📨 رسالة جديدة من نموذج التواصل - {$message->name}");
-            });
-
-            Log::info('✅ Email sent successfully to: ' . $adminEmail);
-
-        } catch (\Exception $e) {
-            Log::error('❌ Email sending failed', [
-                'error' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
+            $adminEmail = $contactData['email'] ?? 'ala.hussein002@gmail.com';
+    
+            Log::info('📧 Sending via Resend to: ' . $adminEmail);
+    
+            $resend = Resend::client(env('RESEND_API_KEY'));
+    
+            $resend->emails->send([
+                'from' => 'Alaa Systems <onboarding@resend.dev>',
+                'to' => [$adminEmail],
+                'subject' => "📨 رسالة جديدة - {$message->name}",
+                'text' => $this->buildEmailBody($message),
             ]);
+    
+            Log::info('✅ Email sent successfully');
+    
+        } catch (\Exception $e) {
+            Log::error('❌ Email failed: ' . $e->getMessage());
             throw $e;
         }
     }
