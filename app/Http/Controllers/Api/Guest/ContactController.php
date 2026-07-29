@@ -15,67 +15,6 @@ class ContactController extends Controller
 {
     use ApiResponse;
 
-    // public function store(Request $request)
-    // {
-    //     $validated = $request->validate([
-    //         'name' => 'required|string|max:255',
-    //         'email' => 'required|email|max:255',
-    //         'phone' => 'required|string|max:20|regex:/^\+\d{1,3}\d{7,12}$/',
-    //         'subject' => 'required|string|max:255',
-    //         'message' => 'required|string|max:2000',
-    //     ], [
-    //         'name.required' => 'الاسم مطلوب',
-    //         'email.required' => 'البريد الإلكتروني مطلوب',
-    //         'email.email' => 'البريد الإلكتروني غير صحيح',
-    //         'phone.required' => 'رقم الهاتف مطلوب',
-    //         'phone.regex' => 'صيغة رقم الهاتف غير صحيحة',
-    //         'subject.required' => 'الموضوع مطلوب',
-    //         'message.required' => 'الرسالة مطلوبة',
-    //     ]);
-
-    //     // Check for spam
-    //     $isSpam = $this->detectSpam($request);
-
-    //     // Create contact message
-    //     $message = ContactMessage::create([
-    //         'name' => $validated['name'],
-    //         'email' => $validated['email'],
-    //         'phone' => $validated['phone'],
-    //         'subject' => $validated['subject'],
-    //         'message' => $validated['message'],
-    //         'category' => $this->detectCategory($validated['subject']),
-    //         'priority' => $this->detectPriority($validated['message']),
-    //         'status' => 'unread',
-    //         'ip_address' => $request->ip(),
-    //         'is_spam' => $isSpam,
-    //     ]);
-
-    //     // Log activity
-    //     try {
-    //         ActivityLog::log(
-    //             'contact_form_submitted',
-    //             'messages',
-    //             "رسالة جديدة من {$validated['name']}",
-    //             'contact_message',
-    //             $message->id
-    //         );
-    //     } catch (\Exception $e) {
-    //         Log::error('Activity log failed: ' . $e->getMessage());
-    //     }
-
-    //     // Send notifications immediately
-    //     try {
-    //         $this->sendNotifications($message);
-    //     } catch (\Exception $e) {
-    //         Log::error('Failed to send notifications: ' . $e->getMessage());
-    //     }
-
-    //     return $this->success(
-    //         null,
-    //         'تم إرسال رسالتك بنجاح! سنتواصل معك قريباً'
-    //     );
-    // }
-
     public function store(Request $request)
     {
         // ✅ Log البداية
@@ -83,7 +22,7 @@ class ContactController extends Controller
             'data' => $request->all(),
             'ip' => $request->ip(),
         ]);
-    
+
         try {
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
@@ -100,17 +39,15 @@ class ContactController extends Controller
                 'subject.required' => 'الموضوع مطلوب',
                 'message.required' => 'الرسالة مطلوبة',
             ]);
-    
+
             Log::info('✅ Validation passed');
-    
+
         } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('❌ Validation failed', [
-                'errors' => $e->errors()
-            ]);
+            Log::error('❌ Validation failed', ['errors' => $e->errors()]);
             throw $e;
         }
-    
-        // ✅ Check for spam
+
+        // ✅ Check for spam مع معالجة الأخطاء
         $isSpam = false;
         try {
             Log::info('Checking spam...');
@@ -118,11 +55,10 @@ class ContactController extends Controller
             Log::info('✅ Spam check done', ['is_spam' => $isSpam]);
         } catch (\Exception $e) {
             Log::warning('⚠️ Spam detection failed', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
         }
-    
+
         // ✅ Create contact message
         try {
             Log::info('Creating message...');
@@ -139,14 +75,12 @@ class ContactController extends Controller
                 'ip_address' => $request->ip(),
                 'is_spam' => $isSpam,
             ]);
-    
+
             Log::info('✅ Message created', ['id' => $message->id]);
-    
+
         } catch (\Exception $e) {
             Log::error('❌ Failed to create message', [
                 'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
             
@@ -155,7 +89,7 @@ class ContactController extends Controller
                 500
             );
         }
-    
+
         // ✅ Log activity
         try {
             Log::info('Logging activity...');
@@ -172,79 +106,76 @@ class ContactController extends Controller
                 'error' => $e->getMessage()
             ]);
         }
-    
-        // ✅ Send notifications
+
+        // ✅ Send email notification
         try {
-            Log::info('Sending notifications...');
-            $this->sendNotifications($message);
-            Log::info('✅ Notifications sent');
+            Log::info('Sending email notification...');
+            $this->sendEmailNotification($message);
+            Log::info('✅ Email notification sent');
         } catch (\Exception $e) {
-            Log::error('❌ Notifications failed', [
-                'error' => $e->getMessage()
+            Log::error('❌ Email notification failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
+            // ✅ لا نُرجع خطأ - الرسالة محفوظة
         }
-    
+
         Log::info('=== Contact Form Completed ===');
-    
+
         return $this->success(
             null,
             'تم إرسال رسالتك بنجاح! سنتواصل معك قريباً'
         );
     }
-    private function sendNotifications($message)
+
+    /**
+     * ✅ إرسال إيميل فقط
+     */
+    private function sendEmailNotification($message)
     {
-        Log::info('=== Starting Notifications ===');
-        Log::info('Message ID: ' . $message->id);
-        
-        $adminProfile = PersonalProfile::first();
-        
-        if (!$adminProfile) {
-            Log::warning('❌ No admin profile found');
-            return;
-        }
-
-        Log::info('Admin Profile found');
-
-        $contactData = $this->parseContactData($adminProfile->contact);
-        
-        Log::info('Contact Data:', $contactData);
-
-        // Send email to admin
-        $adminEmail = $contactData['email'] ?? null;
-        if ($adminEmail) {
-            try {
-                Log::info('📧 Attempting to send email to: ' . $adminEmail);
-                
-                $emailBody = $this->buildEmailBody($message);
-                
-                Mail::raw($emailBody, function ($mail) use ($adminEmail, $message) {
-                    $mail->to($adminEmail)
-                         ->subject("📨 رسالة جديدة من نموذج التواصل - {$message->name}");
-                });
-                
-                Log::info('✅ Email sent successfully to: ' . $adminEmail);
-            } catch (\Exception $e) {
-                Log::error('❌ Email failed: ' . $e->getMessage());
-                Log::error('Stack: ' . $e->getTraceAsString());
+        try {
+            // ✅ جلب إيميل الأدمن
+            $adminProfile = PersonalProfile::first();
+            
+            if (!$adminProfile) {
+                Log::warning('❌ No admin profile found');
+                return;
             }
-        } else {
-            Log::warning('⚠️ Admin email not found in contact data');
-        }
 
-        // Send WhatsApp notification
-        $whatsappNumber = $contactData['whatsapp'] ?? null;
-        if ($whatsappNumber) {
-            try {
-                Log::info('📱 Preparing WhatsApp notification for: ' . $whatsappNumber);
-                $this->sendWhatsAppNotification($message, $whatsappNumber);
-            } catch (\Exception $e) {
-                Log::error('WhatsApp error: ' . $e->getMessage());
+            $contactData = $this->parseContactData($adminProfile->contact);
+            $adminEmail = $contactData['email'] ?? null;
+
+            if (!$adminEmail) {
+                Log::warning('⚠️ Admin email not found in contact data');
+                return;
             }
-        } else {
-            Log::warning('⚠️ Admin WhatsApp number not found in contact data');
+
+            Log::info('📧 Sending email to: ' . $adminEmail);
+
+            // ✅ بناء محتوى الإيميل
+            $emailBody = $this->buildEmailBody($message);
+
+            // ✅ إرسال الإيميل
+            Mail::raw($emailBody, function ($mail) use ($adminEmail, $message) {
+                $mail->to($adminEmail)
+                     ->subject("📨 رسالة جديدة من نموذج التواصل - {$message->name}");
+            });
+
+            Log::info('✅ Email sent successfully to: ' . $adminEmail);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Email sending failed', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+            throw $e;
         }
     }
 
+    /**
+     * ✅ بناء محتوى الإيميل
+     */
     private function buildEmailBody($message)
     {
         return "📨 رسالة جديدة من نموذج التواصل\n\n" .
@@ -263,6 +194,9 @@ class ContactController extends Controller
                "=====================================\n";
     }
 
+    /**
+     * ✅ تحليل بيانات الاتصال
+     */
     private function parseContactData($contactJson)
     {
         try {
@@ -280,64 +214,9 @@ class ContactController extends Controller
         return [];
     }
 
-    private function sendWhatsAppNotification($message, $whatsappNumber)
-    {
-        try {
-            if (config('services.twilio.sid') && config('services.twilio.token')) {
-                Log::info('📱 Using Twilio for WhatsApp');
-                $this->sendViaTwilio($message, $whatsappNumber);
-            } else {
-                Log::info('📱 No Twilio config - logging message');
-                $this->logWhatsAppMessage($message, $whatsappNumber);
-            }
-        } catch (\Exception $e) {
-            Log::error('WhatsApp notification error: ' . $e->getMessage());
-        }
-    }
-
-    private function sendViaTwilio($message, $whatsappNumber)
-    {
-        try {
-            $client = new \Twilio\Rest\Client(
-                config('services.twilio.sid'),
-                config('services.twilio.token')
-            );
-
-            $whatsappText = "📨 رسالة جديدة من نموذج التواصل\n\n";
-            $whatsappText .= "👤 الاسم: {$message->name}\n";
-            $whatsappText .= "📧 البريد: {$message->email}\n";
-            $whatsappText .= "📱 الهاتف: {$message->phone}\n";
-            $whatsappText .= "📌 الموضوع: {$message->subject}\n\n";
-            $whatsappText .= "💬 الرسالة:\n{$message->message}";
-
-            $client->messages->create(
-                "whatsapp:{$whatsappNumber}",
-                [
-                    "from" => "whatsapp:" . config('services.twilio.whatsapp_number'),
-                    "body" => $whatsappText
-                ]
-            );
-
-            Log::info("✅ WhatsApp message sent to: {$whatsappNumber}");
-        } catch (\Exception $e) {
-            Log::error('Twilio error: ' . $e->getMessage());
-            throw $e;
-        }
-    }
-
-    private function logWhatsAppMessage($message, $whatsappNumber)
-    {
-        $whatsappText = "📨 رسالة جديدة من نموذج التواصل\n\n";
-        $whatsappText .= "👤 الاسم: {$message->name}\n";
-        $whatsappText .= "📧 البريد: {$message->email}\n";
-        $whatsappText .= "📱 الهاتف: {$message->phone}\n";
-        $whatsappText .= "📌 الموضوع: {$message->subject}\n\n";
-        $whatsappText .= "💬 الرسالة:\n{$message->message}";
-
-        Log::channel('whatsapp')->info("WhatsApp Message to {$whatsappNumber}:\n{$whatsappText}");
-        Log::info("✅ WhatsApp message logged for: {$whatsappNumber}");
-    }
-
+    /**
+     * ✅ تصنيف الرسالة
+     */
     private function detectCategory($subject)
     {
         $subject = strtolower($subject);
@@ -349,6 +228,9 @@ class ContactController extends Controller
         return 'other';
     }
 
+    /**
+     * ✅ تحديد الأولوية
+     */
     private function detectPriority($message)
     {
         $message = strtolower($message);
@@ -359,22 +241,33 @@ class ContactController extends Controller
         return 'normal';
     }
 
+    /**
+     * ✅ كشف الرسائل المزعجة
+     */
     private function detectSpam(Request $request): bool
     {
-        $message = strtolower($request->message);
-        
-        $spamKeywords = ['viagra', 'casino', 'lottery', 'winner', 'prize', 'click here', 'free money'];
-        
-        foreach ($spamKeywords as $keyword) {
-            if (str_contains($message, $keyword)) {
-                return true;
+        try {
+            $message = strtolower($request->message);
+            
+            // ✅ الكلمات المحظورة
+            $spamKeywords = ['viagra', 'casino', 'lottery', 'winner', 'prize', 'click here', 'free money'];
+            
+            foreach ($spamKeywords as $keyword) {
+                if (str_contains($message, $keyword)) {
+                    return true;
+                }
             }
+
+            // ✅ فحص عدد الرسائل من نفس IP
+            $recentCount = ContactMessage::where('ip_address', $request->ip())
+                ->where('created_at', '>', now()->subMinutes(10))
+                ->count();
+
+            return $recentCount >= 3;
+
+        } catch (\Exception $e) {
+            Log::warning('Spam detection error: ' . $e->getMessage());
+            return false; // في حالة الخطأ، لا نعتبرها spam
         }
-
-        $recentCount = ContactMessage::where('ip_address', $request->ip())
-            ->where('created_at', '>', now()->subMinutes(10))
-            ->count();
-
-        return $recentCount >= 3;
     }
 }
